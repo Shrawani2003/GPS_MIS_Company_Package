@@ -111,7 +111,7 @@ Uploading a new file does **not** delete previous months — nothing is ever
 deleted unless you delete it yourself.
 
 - After uploading a file, confirm/edit the **month label** (guessed from the
-  filename) and click **Save to history**.
+  filename) — it's saved to history automatically, no button to click.
 - The **Total GPS km** and **Total MIS km** cards then show a delta versus
   the most recently-saved earlier month.
 - Use the **"Viewing"** dropdown at the top to switch between the file you
