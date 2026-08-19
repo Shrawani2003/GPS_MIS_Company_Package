@@ -39,12 +39,26 @@ LOGO_PATH = Path(__file__).parent / ".streamlit" / "logo.png"
 
 
 def load_credentials():
+    # On Streamlit Community Cloud, prefer the Secrets manager (configured in the
+    # app's dashboard, never stored in the git repo) over the local file.
+    try:
+        if "ADMIN_USERNAME" in st.secrets and "ADMIN_PASSWORD" in st.secrets:
+            return {"username": st.secrets["ADMIN_USERNAME"], "password": st.secrets["ADMIN_PASSWORD"]}
+    except Exception:
+        pass
     if CREDENTIALS_PATH.exists():
         try:
             return json.loads(CREDENTIALS_PATH.read_text())
         except Exception:
             return None
     return None
+
+
+def using_cloud_secrets():
+    try:
+        return "ADMIN_USERNAME" in st.secrets and "ADMIN_PASSWORD" in st.secrets
+    except Exception:
+        return False
 
 
 def save_credentials(creds):
@@ -120,23 +134,31 @@ with st.sidebar:
         st.rerun()
 
     with st.expander("🔑 Change password"):
-        with st.form("change_password_form"):
-            old_pw = st.text_input("Current password", type="password")
-            new_pw = st.text_input("New password", type="password")
-            confirm_pw = st.text_input("Confirm new password", type="password")
-            pw_submit = st.form_submit_button("Update password")
-        if pw_submit:
-            creds = load_credentials() or {}
-            if old_pw != creds.get("password"):
-                st.error("Current password is incorrect.")
-            elif not new_pw:
-                st.error("New password can't be empty.")
-            elif new_pw != confirm_pw:
-                st.error("New password and confirmation don't match.")
-            else:
-                creds["password"] = new_pw
-                save_credentials(creds)
-                st.success("Password updated — use it next time you log in.")
+        if using_cloud_secrets():
+            st.info(
+                "This app is running on Streamlit Community Cloud, where the password "
+                "comes from the app's **Secrets** settings, not this file. To change it: "
+                "go to your app on share.streamlit.io → Settings → Secrets, update "
+                "ADMIN_PASSWORD there, and save (the app restarts automatically)."
+            )
+        else:
+            with st.form("change_password_form"):
+                old_pw = st.text_input("Current password", type="password")
+                new_pw = st.text_input("New password", type="password")
+                confirm_pw = st.text_input("Confirm new password", type="password")
+                pw_submit = st.form_submit_button("Update password")
+            if pw_submit:
+                creds = load_credentials() or {}
+                if old_pw != creds.get("password"):
+                    st.error("Current password is incorrect.")
+                elif not new_pw:
+                    st.error("New password can't be empty.")
+                elif new_pw != confirm_pw:
+                    st.error("New password and confirmation don't match.")
+                else:
+                    creds["password"] = new_pw
+                    save_credentials(creds)
+                    st.success("Password updated — use it next time you log in.")
 
 # ---------------------------------------------------------------------------
 # Theme (dark, telemetry-style, matches the earlier web dashboard)
