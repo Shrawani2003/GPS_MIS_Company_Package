@@ -105,12 +105,14 @@ def check_login():
 if not check_login():
     st.stop()
 
+# Permanent company branding — edit this constant directly to change the
+# name. To change the logo, replace the file at .streamlit/logo.png.
+COMPANY_NAME = "Supreme Facility Management Limited"
+
 with st.sidebar:
-    branding = load_branding()
     if LOGO_PATH.exists():
-        st.image(str(LOGO_PATH), width=120)
-    if branding.get("company_name"):
-        st.markdown(f"### {branding['company_name']}")
+        st.image(str(LOGO_PATH), width=100)
+    st.markdown(f"### {COMPANY_NAME}")
 
     st.caption(f"Logged in as **{st.session_state.get('current_username', 'admin')}**")
     if st.button("Log out"):
@@ -136,21 +138,6 @@ with st.sidebar:
                 save_credentials(creds)
                 st.success("Password updated — use it next time you log in.")
 
-    with st.expander("🏢 Company branding"):
-        with st.form("branding_form"):
-            company_name_input = st.text_input("Company name", value=branding.get("company_name", ""))
-            logo_file = st.file_uploader("Company logo", type=["png", "jpg", "jpeg"])
-            branding_submit = st.form_submit_button("Save branding")
-        if branding_submit:
-            new_branding = load_branding()
-            new_branding["company_name"] = company_name_input.strip()
-            save_branding(new_branding)
-            if logo_file is not None:
-                LOGO_PATH.parent.mkdir(exist_ok=True)
-                LOGO_PATH.write_bytes(logo_file.getvalue())
-            st.success("Branding saved.")
-            st.rerun()
-
 # ---------------------------------------------------------------------------
 # Theme (dark, telemetry-style, matches the earlier web dashboard)
 # ---------------------------------------------------------------------------
@@ -169,21 +156,51 @@ st.markdown(f"""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
 
-html, body, [class*="css"] {{ font-family: 'Inter', sans-serif; }}
+html, body, [class*="css"] {{ font-family: 'Inter', sans-serif; font-size: 13px; }}
 .stApp {{ background-color: {COLOR_BG}; color: {COLOR_TEXT}; }}
 #MainMenu {{ visibility: hidden; }}
 footer {{ visibility: hidden; }}
 
-h1 {{ font-family: 'Space Grotesk', sans-serif !important; font-weight: 600 !important; color: {COLOR_TEXT} !important; }}
-h2, h3, h4 {{ font-family: 'Space Grotesk', sans-serif !important; font-weight: 500 !important; color: {COLOR_TEXT} !important; }}
+h1 {{ font-family: 'Space Grotesk', sans-serif !important; font-weight: 600 !important; color: {COLOR_TEXT} !important; font-size: 24px !important; }}
+h2, h3 {{ font-family: 'Space Grotesk', sans-serif !important; font-weight: 500 !important; color: {COLOR_TEXT} !important; font-size: 16px !important; }}
+h4 {{ font-family: 'Space Grotesk', sans-serif !important; font-weight: 500 !important; color: {COLOR_TEXT} !important; font-size: 14px !important; }}
+p, label, span, div {{ font-size: 13px; }}
 
 [data-testid="stMetric"] {{
     background: {COLOR_PANEL}; border: 1px solid {COLOR_BORDER}; border-radius: 10px;
-    padding: 14px 18px;
+    padding: 12px 16px; transition: transform 0.15s ease, box-shadow 0.15s ease;
 }}
-[data-testid="stMetricLabel"] {{ color: {COLOR_MUTED} !important; font-size: 11px !important; letter-spacing: 0.5px; text-transform: uppercase; }}
-[data-testid="stMetricValue"] {{ color: {COLOR_TEXT} !important; font-family: 'IBM Plex Mono', monospace !important; font-size: 24px !important; }}
-[data-testid="stMetricDelta"] {{ font-family: 'IBM Plex Mono', monospace !important; }}
+[data-testid="stMetric"]:hover {{ transform: translateY(-2px); }}
+[data-testid="stMetricLabel"] {{ color: {COLOR_MUTED} !important; font-size: 10px !important; letter-spacing: 0.5px; text-transform: uppercase; }}
+[data-testid="stMetricValue"] {{ color: {COLOR_TEXT} !important; font-family: 'IBM Plex Mono', monospace !important; font-size: 20px !important; }}
+[data-testid="stMetricDelta"] {{ font-family: 'IBM Plex Mono', monospace !important; font-size: 12px !important; }}
+
+/* KPI card accent colors */
+[class*="st-key-kpi_gps"] [data-testid="stMetric"] {{
+    border-left: 3px solid {COLOR_GPS} !important;
+    background: linear-gradient(135deg, rgba(79,209,232,0.10), {COLOR_PANEL} 60%) !important;
+    box-shadow: 0 0 16px rgba(79,209,232,0.06);
+}}
+[class*="st-key-kpi_mis"] [data-testid="stMetric"] {{
+    border-left: 3px solid {COLOR_MIS} !important;
+    background: linear-gradient(135deg, rgba(245,166,35,0.10), {COLOR_PANEL} 60%) !important;
+    box-shadow: 0 0 16px rgba(245,166,35,0.06);
+}}
+[class*="st-key-kpi_diff"] [data-testid="stMetric"] {{
+    border-left: 3px solid #C084FC !important;
+    background: linear-gradient(135deg, rgba(192,132,252,0.10), {COLOR_PANEL} 60%) !important;
+    box-shadow: 0 0 16px rgba(192,132,252,0.06);
+}}
+[class*="st-key-kpi_vehicles"] [data-testid="stMetric"] {{
+    border-left: 3px solid #60A5FA !important;
+    background: linear-gradient(135deg, rgba(96,165,250,0.10), {COLOR_PANEL} 60%) !important;
+    box-shadow: 0 0 16px rgba(96,165,250,0.06);
+}}
+[class*="st-key-kpi_flagged"] [data-testid="stMetric"] {{
+    border-left: 3px solid {COLOR_CRIT} !important;
+    background: linear-gradient(135deg, rgba(255,93,93,0.10), {COLOR_PANEL} 60%) !important;
+    box-shadow: 0 0 16px rgba(255,93,93,0.06);
+}}
 
 .action-card {{
     background: {COLOR_PANEL}; border: 1px solid {COLOR_BORDER}; border-radius: 8px;
@@ -194,31 +211,57 @@ h2, h3, h4 {{ font-family: 'Space Grotesk', sans-serif !important; font-weight: 
 .stDataFrame, [data-testid="stDataFrame"] {{
     border: 1px solid {COLOR_BORDER} !important; border-radius: 10px !important; overflow: hidden;
 }}
-[data-testid="stDataFrame"] * {{ font-family: 'IBM Plex Mono', monospace !important; font-size: 12.5px !important; }}
+[data-testid="stDataFrame"] * {{ font-family: 'IBM Plex Mono', monospace !important; font-size: 11px !important; }}
 
 /* Inputs */
 .stTextInput input, .stSelectbox [data-baseweb="select"] > div, .stTextInput > div > div {{
     background: {COLOR_PANEL} !important; border: 1px solid {COLOR_BORDER} !important;
-    color: {COLOR_TEXT} !important; border-radius: 7px !important;
+    color: {COLOR_TEXT} !important; border-radius: 7px !important; font-size: 13px !important;
 }}
 .stSlider [data-baseweb="slider"] {{ padding-top: 6px; }}
+.stSlider [role="slider"] {{ background: {COLOR_MIS} !important; box-shadow: 0 0 8px rgba(245,166,35,0.5) !important; }}
+.stSlider div[data-baseweb="slider"] > div > div {{ background: linear-gradient(90deg, {COLOR_GPS}, {COLOR_MIS}) !important; }}
 
 /* File uploader */
 [data-testid="stFileUploaderDropzone"] {{
-    background: {COLOR_PANEL} !important; border: 1.5px dashed {COLOR_BORDER} !important; border-radius: 12px !important;
+    background: linear-gradient(135deg, rgba(79,209,232,0.05), {COLOR_PANEL} 70%) !important;
+    border: 1.5px dashed {COLOR_BORDER} !important; border-radius: 12px !important;
+    transition: border-color 0.15s ease;
 }}
+[data-testid="stFileUploaderDropzone"]:hover {{ border-color: {COLOR_GPS} !important; }}
 
-/* Buttons */
+/* Buttons — normal size by default */
 .stButton button, .stFormSubmitButton button {{
     background: {COLOR_GPS} !important; color: {COLOR_BG} !important; border: none !important;
-    border-radius: 8px !important; font-weight: 600 !important;
-    white-space: pre-line !important; line-height: 1.35 !important; min-height: 62px !important;
-    font-family: 'IBM Plex Mono', monospace !important; font-size: 13px !important;
+    border-radius: 7px !important; font-weight: 500 !important; font-size: 12px !important;
+    padding: 0.35rem 0.8rem !important; transition: transform 0.1s ease, opacity 0.1s ease;
 }}
-.stButton button:hover, .stFormSubmitButton button:hover {{ opacity: 0.85; }}
+.stButton button:hover, .stFormSubmitButton button:hover {{ opacity: 0.85; transform: translateY(-1px); }}
+
+/* Corrective-action buttons only — bigger, card-like, two-line label */
+.st-key-corrective_actions button {{
+    white-space: pre-line !important; line-height: 1.3 !important; min-height: 54px !important;
+    font-family: 'IBM Plex Mono', monospace !important; font-size: 11px !important; font-weight: 600 !important;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.25);
+}}
+
+/* Corrective-action buttons colored by severity */
+[class*="st-key-actsev_critical"] button {{
+    background: linear-gradient(135deg, #FF6B6B, #E14545) !important; color: #FFF !important;
+}}
+[class*="st-key-actsev_warn"] button {{
+    background: linear-gradient(135deg, #FFC259, #E8971F) !important; color: #241800 !important;
+}}
+[class*="st-key-actsev_watch"] button {{
+    background: linear-gradient(135deg, #FFD98A, #E8971F) !important; color: #241800 !important; opacity: 0.92;
+}}
+[class*="st-key-actsev_ok"] button {{
+    background: linear-gradient(135deg, #5EEBA0, #2BB86B) !important; color: #06210F !important;
+}}
 
 /* Sidebar */
 [data-testid="stSidebar"] {{ background: {COLOR_PANEL} !important; border-right: 1px solid {COLOR_BORDER}; }}
+[data-testid="stSidebar"] img {{ border-radius: 6px; }}
 
 /* Captions */
 .stCaption, [data-testid="stCaptionContainer"] {{ color: {COLOR_MUTED} !important; font-family: 'IBM Plex Mono', monospace !important; }}
@@ -363,7 +406,9 @@ def get_previous_entry(hist, current_key):
 # ---------------------------------------------------------------------------
 st.markdown(
     f"<div style='color:{COLOR_GPS}; font-family:\"IBM Plex Mono\",monospace; font-size:12px; letter-spacing:2px;'>FLEET TELEMETRY RECONCILIATION</div>"
-    f"<h1 style='margin-top:2px;'>GPS vs MIS Dashboard</h1>",
+    f"<h1 style='margin-top:2px; background:linear-gradient(90deg,{COLOR_GPS},{COLOR_MIS}) !important; "
+    f"-webkit-background-clip:text !important; -webkit-text-fill-color:transparent !important; background-clip:text !important; "
+    f"display:inline-block;'>GPS vs MIS Dashboard</h1>",
     unsafe_allow_html=True,
 )
 
@@ -380,7 +425,6 @@ view_options = (["📤 Uploaded file"] if uploaded is not None else []) + month_
 view_choice = st.selectbox("Viewing", view_options, index=0)
 
 has_daily = False
-save_clicked = False
 
 if view_choice == "📤 Uploaded file":
     try:
@@ -391,13 +435,11 @@ if view_choice == "📤 Uploaded file":
     has_daily = True
 
     guessed_key, guessed_label = guess_month_from_filename(uploaded.name)
-    col_m1, col_m2 = st.columns([3, 1])
-    month_label = col_m1.text_input("Month label for this file (edit if the guess is wrong)", value=guessed_label)
+    month_label = st.text_input("Month label for this file (edit if the guess is wrong)", value=guessed_label)
     try:
         month_key = datetime.strptime(month_label.strip(), "%B %Y").strftime("%Y-%m")
     except ValueError:
         month_key = guessed_key
-    save_clicked = col_m2.button("💾 Save to history")
 else:
     entry = hist[next(e["key"] for e in sorted_hist_entries if e["label"] == view_choice)]
     df = pd.DataFrame(entry["vehicle_totals"])
@@ -421,7 +463,7 @@ overall_diff = total_mis - total_gps
 overall_pct = (overall_diff / total_gps) if total_gps else 0
 flagged = (df["Action"] != "No action needed").sum()
 
-if save_clicked:
+if view_choice == "📤 Uploaded file":
     hist[month_key] = {
         "key": month_key, "label": month_label.strip(), "saved_at": datetime.now().isoformat(),
         "total_gps": float(total_gps), "total_mis": float(total_mis),
@@ -432,7 +474,7 @@ if save_clicked:
         "vehicle_totals": df[["Vehicle", "Site", "Total GPS", "Total MIS"]].to_dict("records"),
     }
     save_history(hist)
-    st.success(f"Saved as **{month_label.strip()}** — {len(hist)} month(s) in history now.")
+    st.caption(f"✓ Autosaved as **{month_label.strip()}** — {len(hist)} month(s) in history now.")
 
 prev_entry = get_previous_entry(hist, month_key)
 if prev_entry:
@@ -442,14 +484,24 @@ if prev_entry:
     mis_delta_label = f"{mis_delta:+,.0f} km vs {prev_entry['label']}"
 else:
     gps_delta_label = mis_delta_label = None
-    st.caption("No previous month saved yet to compare against — click **Save to history** above once you're happy with this month, then next month's upload will show a comparison here.")
+    st.caption("No previous month saved yet to compare against — once you save another month, comparisons will show here automatically.")
 
 c1, c2, c3, c4, c5 = st.columns(5)
-c1.metric("Total GPS km", f"{total_gps:,.0f}", gps_delta_label)
-c2.metric("Total MIS km", f"{total_mis:,.0f}", mis_delta_label)
-c3.metric("Overall Diff", f"{overall_pct*100:.1f}%", f"{overall_diff:+,.0f} km")
-c4.metric("Vehicles", f"{len(df)}", f"{df['Site'].nunique()} sites")
-c5.metric("Flagged", f"{flagged}", f"{flagged/len(df)*100:.0f}% of fleet")
+with c1:
+    with st.container(key="kpi_gps"):
+        st.metric("Total GPS km", f"{total_gps:,.0f}", gps_delta_label)
+with c2:
+    with st.container(key="kpi_mis"):
+        st.metric("Total MIS km", f"{total_mis:,.0f}", mis_delta_label)
+with c3:
+    with st.container(key="kpi_diff"):
+        st.metric("Overall Diff", f"{overall_pct*100:.1f}%", f"{overall_diff:+,.0f} km")
+with c4:
+    with st.container(key="kpi_vehicles"):
+        st.metric("Vehicles", f"{len(df)}", f"{df['Site'].nunique()} sites")
+with c5:
+    with st.container(key="kpi_flagged"):
+        st.metric("Flagged", f"{flagged}", f"{flagged/len(df)*100:.0f}% of fleet")
 
 if has_daily:
     st.markdown("### Day-wise total km, all vehicles")
@@ -464,31 +516,6 @@ if has_daily:
         legend=dict(orientation="h", y=1.15),
     )
     st.plotly_chart(fig, use_container_width=True)
-
-st.markdown("### Corrective actions")
-st.caption("Click a card to filter the vehicle table below to just those vehicles.")
-action_counts = df.groupby(["Action", "Severity"]).size().reset_index(name="Count")
-order = ["Check GPS device", "File missing MIS log", "No data either side", "Audit MIS entries",
-         "Verify unrecorded trips", "Keep an eye on it", "No action needed"]
-action_counts["order"] = action_counts["Action"].apply(lambda a: order.index(a) if a in order else 99)
-action_counts = action_counts.sort_values("order")
-
-if "action_filter" not in st.session_state:
-    st.session_state.action_filter = "All"
-
-SEVERITY_EMOJI = {"critical": "🔴", "warn": "🟠", "watch": "🟡", "ok": "🟢"}
-
-cols = st.columns(len(action_counts)) if len(action_counts) else [st]
-for col, (_, row) in zip(cols, action_counts.iterrows()):
-    is_active = st.session_state.action_filter == row["Action"]
-    emoji = SEVERITY_EMOJI.get(row["Severity"], "⚪")
-    label = f"{emoji} {row['Count']}\n{row['Action']}"
-    if is_active:
-        label = f"✓ {emoji} {row['Count']}\n{row['Action']}"
-    with col:
-        if st.button(label, key=f"actbtn_{row['Action']}", use_container_width=True):
-            st.session_state.action_filter = "All" if is_active else row["Action"]
-            st.rerun()
 
 st.markdown("### Sites")
 site_summary = df.groupby("Site", as_index=False).agg(
@@ -561,6 +588,33 @@ site_styled = (
     .hide(axis="columns", subset=["Severity"])
 )
 st.dataframe(site_styled, use_container_width=True, hide_index=True)
+
+st.markdown("### Corrective actions")
+st.caption("Click a card to filter the vehicle table below to just those vehicles.")
+action_counts = df.groupby(["Action", "Severity"]).size().reset_index(name="Count")
+order = ["Check GPS device", "File missing MIS log", "No data either side", "Audit MIS entries",
+         "Verify unrecorded trips", "Keep an eye on it", "No action needed"]
+action_counts["order"] = action_counts["Action"].apply(lambda a: order.index(a) if a in order else 99)
+action_counts = action_counts.sort_values("order")
+
+if "action_filter" not in st.session_state:
+    st.session_state.action_filter = "All"
+
+SEVERITY_EMOJI = {"critical": "🔴", "warn": "🟠", "watch": "🟡", "ok": "🟢"}
+
+with st.container(key="corrective_actions"):
+    cols = st.columns(len(action_counts)) if len(action_counts) else [st]
+    for idx, (col, (_, row)) in enumerate(zip(cols, action_counts.iterrows())):
+        is_active = st.session_state.action_filter == row["Action"]
+        emoji = SEVERITY_EMOJI.get(row["Severity"], "⚪")
+        label = f"{emoji} {row['Count']}\n{row['Action']}"
+        if is_active:
+            label = f"✓ {emoji} {row['Count']}\n{row['Action']}"
+        with col:
+            with st.container(key=f"actsev_{row['Severity']}_{idx}"):
+                if st.button(label, key=f"actbtn_{row['Action']}", use_container_width=True):
+                    st.session_state.action_filter = "All" if is_active else row["Action"]
+                    st.rerun()
 
 st.markdown("### Vehicles")
 if st.session_state.action_filter != "All":
@@ -662,7 +716,7 @@ hist = load_history()  # reload in case this run just saved a new entry
 if hist:
     st.markdown("---")
     st.markdown("### Monthly history")
-    st.caption("Every month you click **Save to history** stays here permanently, even after you upload a different file or restart the app.")
+    st.caption("Every file you upload is saved here automatically under its month label, even after you upload a different file or restart the app.")
 
     sorted_entries = sorted(hist.values(), key=lambda x: x["key"])
     hist_df = pd.DataFrame([{
