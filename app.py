@@ -549,13 +549,23 @@ if has_daily:
     st.markdown("### Day-wise total km, all vehicles")
     trend = daily_df.groupby("Day", as_index=False)[["GPS", "MIS"]].sum()
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=trend["Day"], y=trend["GPS"], name="GPS", line=dict(color=COLOR_GPS, width=2)))
-    fig.add_trace(go.Scatter(x=trend["Day"], y=trend["MIS"], name="MIS", line=dict(color=COLOR_MIS, width=2)))
+    fig.add_trace(go.Scatter(
+        x=trend["Day"], y=trend["GPS"], name="GPS", mode="lines+markers",
+        line=dict(color=COLOR_GPS, width=2.5), marker=dict(size=5),
+        hovertemplate="Day %{x}<br>GPS: %{y:,.0f} km<extra></extra>",
+    ))
+    fig.add_trace(go.Scatter(
+        x=trend["Day"], y=trend["MIS"], name="MIS", mode="lines+markers",
+        line=dict(color=COLOR_MIS, width=2.5), marker=dict(size=5),
+        hovertemplate="Day %{x}<br>MIS: %{y:,.0f} km<extra></extra>",
+    ))
     fig.update_layout(
         plot_bgcolor=COLOR_PANEL, paper_bgcolor=COLOR_BG, font_color=COLOR_TEXT,
-        height=280, margin=dict(l=10, r=10, t=10, b=10),
-        xaxis=dict(gridcolor=COLOR_BORDER), yaxis=dict(gridcolor=COLOR_BORDER),
-        legend=dict(orientation="h", y=1.15),
+        height=300, margin=dict(l=10, r=10, t=10, b=10),
+        xaxis=dict(gridcolor=COLOR_BORDER, title="Day of month", tickfont=dict(size=11), dtick=2),
+        yaxis=dict(gridcolor=COLOR_BORDER, title="Km", tickfont=dict(size=11)),
+        legend=dict(orientation="h", y=1.12, font=dict(size=12)),
+        hovermode="x unified",
     )
     st.plotly_chart(fig, use_container_width=True)
 
@@ -580,28 +590,56 @@ def site_severity(diff_pct, threshold_pct):
 site_summary["Severity"] = site_summary["Diff %"].apply(lambda d: site_severity(d, threshold))
 site_bar_colors = site_summary["Severity"].map(ACTION_COLORS)
 
+n_sites = len(site_summary)
+bar_height = max(320, n_sites * 30)
+
+# --- Chart 1: GPS vs MIS volume by site (horizontal, sorted by GPS volume) ---
+vol_sorted = site_summary.sort_values("Total_GPS", ascending=True)
 fig_sites = go.Figure()
-fig_sites.add_trace(go.Bar(x=site_summary["Site"], y=site_summary["Total_GPS"], name="GPS", marker_color=COLOR_GPS))
-fig_sites.add_trace(go.Bar(x=site_summary["Site"], y=site_summary["Total_MIS"], name="MIS", marker_color=COLOR_MIS))
+fig_sites.add_trace(go.Bar(
+    y=vol_sorted["Site"], x=vol_sorted["Total_GPS"], name="GPS", orientation="h",
+    marker_color=COLOR_GPS, text=vol_sorted["Total_GPS"].apply(lambda v: f"{v:,.0f}"),
+    textposition="outside", textfont=dict(size=11, color=COLOR_TEXT, family="IBM Plex Mono"),
+    hovertemplate="%{y}<br>GPS: %{x:,.0f} km<extra></extra>",
+))
+fig_sites.add_trace(go.Bar(
+    y=vol_sorted["Site"], x=vol_sorted["Total_MIS"], name="MIS", orientation="h",
+    marker_color=COLOR_MIS, text=vol_sorted["Total_MIS"].apply(lambda v: f"{v:,.0f}"),
+    textposition="outside", textfont=dict(size=11, color=COLOR_TEXT, family="IBM Plex Mono"),
+    hovertemplate="%{y}<br>MIS: %{x:,.0f} km<extra></extra>",
+))
 fig_sites.update_layout(
     barmode="group", plot_bgcolor=COLOR_PANEL, paper_bgcolor=COLOR_BG, font_color=COLOR_TEXT,
-    height=280, margin=dict(l=10, r=10, t=10, b=10),
-    xaxis=dict(gridcolor=COLOR_BORDER, tickangle=-35), yaxis=dict(gridcolor=COLOR_BORDER),
-    legend=dict(orientation="h", y=1.15),
+    height=bar_height, margin=dict(l=10, r=60, t=10, b=30),
+    xaxis=dict(gridcolor=COLOR_BORDER, title="Km", tickfont=dict(size=11)),
+    yaxis=dict(tickfont=dict(size=12, family="Inter"), automargin=True),
+    legend=dict(orientation="h", y=1.03, x=0, font=dict(size=12)),
+    bargap=0.28, bargroupgap=0.08,
 )
+st.caption("GPS vs MIS total km by site — sorted by GPS volume")
 st.plotly_chart(fig_sites, use_container_width=True)
 
+# --- Chart 2: Diff % by site (horizontal diverging bar, worst at top) ---
+diff_sorted = site_summary.sort_values("Diff %", key=abs, ascending=True)
+diff_colors_sorted = diff_sorted["Severity"].map(ACTION_COLORS)
+diff_pct_vals = diff_sorted["Diff %"] * 100
 fig_sites_diff = go.Figure()
 fig_sites_diff.add_trace(go.Bar(
-    x=site_summary["Site"], y=site_summary["Diff %"] * 100,
-    marker_color=site_bar_colors, name="Diff %",
+    y=diff_sorted["Site"], x=diff_pct_vals, orientation="h",
+    marker_color=diff_colors_sorted,
+    text=diff_pct_vals.apply(lambda v: f"{v:+.1f}%"),
+    textposition="outside", textfont=dict(size=11, family="IBM Plex Mono"),
+    hovertemplate="%{y}<br>Diff: %{x:.1f}%<extra></extra>",
 ))
+fig_sites_diff.add_vline(x=0, line_color=COLOR_BORDER, line_width=1)
 fig_sites_diff.update_layout(
     plot_bgcolor=COLOR_PANEL, paper_bgcolor=COLOR_BG, font_color=COLOR_TEXT,
-    height=220, margin=dict(l=10, r=10, t=10, b=10),
-    xaxis=dict(gridcolor=COLOR_BORDER, tickangle=-35), yaxis=dict(gridcolor=COLOR_BORDER, title="Diff %"),
+    height=bar_height, margin=dict(l=10, r=60, t=10, b=30),
+    xaxis=dict(gridcolor=COLOR_BORDER, title="Diff % (MIS vs GPS)", tickfont=dict(size=11)),
+    yaxis=dict(tickfont=dict(size=12, family="Inter"), automargin=True),
     showlegend=False,
 )
+st.caption("Mismatch % by site — worst at top, red/amber = over threshold")
 st.plotly_chart(fig_sites_diff, use_container_width=True)
 
 site_options = ["All sites"] + site_summary["Site"].tolist()
@@ -737,13 +775,23 @@ if veh_pick:
     vd = daily_df[daily_df["Vehicle"] == veh_pick]
     if has_daily and len(vd):
         fig2 = go.Figure()
-        fig2.add_trace(go.Scatter(x=vd["Day"], y=vd["GPS"], name="GPS", line=dict(color=COLOR_GPS, width=2)))
-        fig2.add_trace(go.Scatter(x=vd["Day"], y=vd["MIS"], name="MIS", line=dict(color=COLOR_MIS, width=2)))
+        fig2.add_trace(go.Scatter(
+            x=vd["Day"], y=vd["GPS"], name="GPS", mode="lines+markers",
+            line=dict(color=COLOR_GPS, width=2.5), marker=dict(size=5),
+            hovertemplate="Day %{x}<br>GPS: %{y:,.1f} km<extra></extra>",
+        ))
+        fig2.add_trace(go.Scatter(
+            x=vd["Day"], y=vd["MIS"], name="MIS", mode="lines+markers",
+            line=dict(color=COLOR_MIS, width=2.5), marker=dict(size=5),
+            hovertemplate="Day %{x}<br>MIS: %{y:,.1f} km<extra></extra>",
+        ))
         fig2.update_layout(
             plot_bgcolor=COLOR_PANEL, paper_bgcolor=COLOR_BG, font_color=COLOR_TEXT,
-            height=240, margin=dict(l=10, r=10, t=10, b=10),
-            xaxis=dict(gridcolor=COLOR_BORDER), yaxis=dict(gridcolor=COLOR_BORDER),
-            legend=dict(orientation="h", y=1.15),
+            height=260, margin=dict(l=10, r=10, t=10, b=10),
+            xaxis=dict(gridcolor=COLOR_BORDER, title="Day of month", tickfont=dict(size=11), dtick=2),
+            yaxis=dict(gridcolor=COLOR_BORDER, title="Km", tickfont=dict(size=11)),
+            legend=dict(orientation="h", y=1.12, font=dict(size=12)),
+            hovermode="x unified",
         )
         st.plotly_chart(fig2, use_container_width=True)
     else:
