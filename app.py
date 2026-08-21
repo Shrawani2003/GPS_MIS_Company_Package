@@ -619,27 +619,19 @@ fig_sites.update_layout(
 st.caption("GPS vs MIS total km by site — sorted by GPS volume")
 st.plotly_chart(fig_sites, use_container_width=True)
 
-# --- Chart 2: Diff % by site (horizontal diverging bar, worst at top) ---
-diff_sorted = site_summary.sort_values("Diff %", key=abs, ascending=True)
-diff_colors_sorted = diff_sorted["Severity"].map(ACTION_COLORS)
-diff_pct_vals = diff_sorted["Diff %"] * 100
+# --- Chart 2: Diff % by site (vertical bars, colored by severity) ---
+site_bar_colors = site_summary["Severity"].map(ACTION_COLORS)
 fig_sites_diff = go.Figure()
 fig_sites_diff.add_trace(go.Bar(
-    y=diff_sorted["Site"], x=diff_pct_vals, orientation="h",
-    marker_color=diff_colors_sorted,
-    text=diff_pct_vals.apply(lambda v: f"{v:+.1f}%"),
-    textposition="outside", textfont=dict(size=11, family="IBM Plex Mono"),
-    hovertemplate="%{y}<br>Diff: %{x:.1f}%<extra></extra>",
+    x=site_summary["Site"], y=site_summary["Diff %"] * 100,
+    marker_color=site_bar_colors, name="Diff %",
 ))
-fig_sites_diff.add_vline(x=0, line_color=COLOR_BORDER, line_width=1)
 fig_sites_diff.update_layout(
     plot_bgcolor=COLOR_PANEL, paper_bgcolor=COLOR_BG, font_color=COLOR_TEXT,
-    height=bar_height, margin=dict(l=10, r=60, t=10, b=30),
-    xaxis=dict(gridcolor=COLOR_BORDER, title="Diff % (MIS vs GPS)", tickfont=dict(size=11)),
-    yaxis=dict(tickfont=dict(size=12, family="Inter"), automargin=True),
+    height=220, margin=dict(l=10, r=10, t=10, b=10),
+    xaxis=dict(gridcolor=COLOR_BORDER, tickangle=-35), yaxis=dict(gridcolor=COLOR_BORDER, title="Diff %"),
     showlegend=False,
 )
-st.caption("Mismatch % by site — worst at top, red/amber = over threshold")
 st.plotly_chart(fig_sites_diff, use_container_width=True)
 
 site_options = ["All sites"] + site_summary["Site"].tolist()
