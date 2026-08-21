@@ -468,9 +468,21 @@ else:
     df["Diff"] = df["Total MIS"] - df["Total GPS"]
     df["Diff %"] = df.apply(lambda r: (r["Diff"] / r["Total GPS"]) if r["Total GPS"] else 0, axis=1)
     df["Source"] = "Both"
-    daily_df = pd.DataFrame(columns=["Vehicle", "Day", "GPS", "MIS"])
     month_key = entry["key"]
-    st.caption(f"Viewing saved history for **{view_choice}** — daily breakdown isn't stored for saved months, only totals per vehicle.")
+
+    daily_compact = entry.get("daily")
+    if daily_compact:
+        has_daily = True
+        daily_rows = []
+        for veh, series in daily_compact.items():
+            gvals, mvals = series["g"], series["m"]
+            for d in range(len(gvals)):
+                daily_rows.append({"Vehicle": veh, "Day": d + 1, "GPS": gvals[d], "MIS": mvals[d]})
+        daily_df = pd.DataFrame(daily_rows)
+        st.caption(f"Viewing saved history for **{view_choice}** — including day-wise breakdown.")
+    else:
+        daily_df = pd.DataFrame(columns=["Vehicle", "Day", "GPS", "MIS"])
+        st.caption(f"Viewing saved history for **{view_choice}** — this month was saved before day-wise data was stored, so only totals are available.")
 
 threshold = st.slider("Flag threshold (%)  — flag vehicles where |Diff %| exceeds this", 5, 100, 20, step=5)
 
@@ -486,6 +498,13 @@ overall_pct = (overall_diff / total_gps) if total_gps else 0
 flagged = (df["Action"] != "No action needed").sum()
 
 if view_choice == "📤 Uploaded file":
+    daily_compact = {}
+    for veh, grp in daily_df.groupby("Vehicle"):
+        grp_sorted = grp.sort_values("Day")
+        daily_compact[veh] = {
+            "g": [round(float(v), 1) for v in grp_sorted["GPS"].tolist()],
+            "m": [round(float(v), 1) for v in grp_sorted["MIS"].tolist()],
+        }
     hist[month_key] = {
         "key": month_key, "label": month_label.strip(), "saved_at": datetime.now().isoformat(),
         "total_gps": float(total_gps), "total_mis": float(total_mis),
@@ -494,6 +513,7 @@ if view_choice == "📤 Uploaded file":
             Total_GPS=("Total GPS", "sum"), Total_MIS=("Total MIS", "sum")
         ).to_dict("records"),
         "vehicle_totals": df[["Vehicle", "Site", "Total GPS", "Total MIS"]].to_dict("records"),
+        "daily": daily_compact,
     }
     save_history(hist)
     st.caption(f"✓ Autosaved as **{month_label.strip()}** — {len(hist)} month(s) in history now.")
