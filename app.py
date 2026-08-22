@@ -31,6 +31,151 @@ from openpyxl import load_workbook
 st.set_page_config(page_title="GPS vs MIS Fleet Dashboard", layout="wide", page_icon="🚚", initial_sidebar_state="expanded")
 
 # ---------------------------------------------------------------------------
+# Theme (light, clean SaaS-dashboard style — white cards, colored top borders)
+# ---------------------------------------------------------------------------
+COLOR_BG = "#F4F6F9"
+COLOR_PANEL = "#FFFFFF"
+COLOR_BORDER = "#E5E8EC"
+COLOR_TEXT = "#1F2733"
+COLOR_MUTED = "#6B7684"
+COLOR_GPS = "#0EA5E9"
+COLOR_MIS = "#F59E0B"
+COLOR_OK = "#10B981"
+COLOR_CRIT = "#EF4444"
+COLOR_WARN = "#F59E0B"
+COLOR_DIFF = "#8B5CF6"
+COLOR_VEHICLES = "#3B82F6"
+
+st.markdown(f"""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+html, body, [class*="css"] {{ font-family: 'Inter', sans-serif; font-size: 13px; }}
+.stApp {{ background-color: {COLOR_BG}; color: {COLOR_TEXT}; }}
+#MainMenu {{ visibility: hidden; }}
+footer {{ visibility: hidden; }}
+
+h1 {{ font-family: 'Space Grotesk', sans-serif !important; font-weight: 700 !important; color: {COLOR_TEXT} !important; font-size: 26px !important; }}
+h2, h3 {{ font-family: 'Space Grotesk', sans-serif !important; font-weight: 600 !important; color: {COLOR_TEXT} !important; font-size: 17px !important; }}
+h4 {{ font-family: 'Space Grotesk', sans-serif !important; font-weight: 600 !important; color: {COLOR_TEXT} !important; font-size: 14px !important; }}
+p, label, span, div {{ font-size: 13px; }}
+
+/* Custom KPI cards */
+.kpi-card {{
+    background: {COLOR_PANEL}; border: 1px solid {COLOR_BORDER}; border-radius: 12px;
+    padding: 18px 18px 16px; position: relative; overflow: hidden;
+    box-shadow: 0 1px 3px rgba(16,24,40,0.06); transition: transform 0.15s ease, box-shadow 0.15s ease;
+}}
+.kpi-card:hover {{ transform: translateY(-2px); box-shadow: 0 6px 16px rgba(16,24,40,0.10); }}
+.kpi-topbar {{ position: absolute; top: 0; left: 0; right: 0; height: 4px; }}
+.kpi-icon {{
+    width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center;
+    justify-content: center; font-size: 18px; margin-bottom: 14px;
+}}
+.kpi-label {{ color: {COLOR_MUTED}; font-size: 11px; letter-spacing: 0.6px; text-transform: uppercase; font-weight: 600; margin-bottom: 4px; }}
+.kpi-value {{ color: {COLOR_TEXT}; font-family: 'IBM Plex Mono', monospace; font-size: 24px; font-weight: 600; margin-bottom: 8px; }}
+.kpi-delta {{ display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 20px; font-family: 'IBM Plex Mono', monospace; }}
+
+.action-card {{
+    background: {COLOR_PANEL}; border: 1px solid {COLOR_BORDER}; border-radius: 8px;
+    padding: 10px 14px; margin-bottom: 6px;
+}}
+
+/* Dataframe / tables */
+.stDataFrame, [data-testid="stDataFrame"] {{
+    border: 1px solid {COLOR_BORDER} !important; border-radius: 10px !important; overflow: hidden;
+}}
+[data-testid="stDataFrame"] * {{ font-family: 'IBM Plex Mono', monospace !important; font-size: 11px !important; }}
+
+/* Inputs */
+.stTextInput input, .stSelectbox [data-baseweb="select"] > div, .stTextInput > div > div {{
+    background: {COLOR_PANEL} !important; border: 1px solid {COLOR_BORDER} !important;
+    color: {COLOR_TEXT} !important; border-radius: 7px !important; font-size: 13px !important;
+}}
+.stSlider [data-baseweb="slider"] {{ padding-top: 6px; }}
+.stSlider [role="slider"] {{ background: {COLOR_MIS} !important; box-shadow: 0 0 0 4px rgba(245,158,11,0.18) !important; }}
+.stSlider div[data-baseweb="slider"] > div > div {{ background: linear-gradient(90deg, {COLOR_GPS}, {COLOR_MIS}) !important; }}
+
+/* File uploader */
+[data-testid="stFileUploaderDropzone"] {{
+    background: linear-gradient(135deg, rgba(14,165,233,0.04), {COLOR_PANEL} 70%) !important;
+    border: 1.5px dashed {COLOR_BORDER} !important; border-radius: 12px !important;
+    transition: border-color 0.15s ease;
+}}
+[data-testid="stFileUploaderDropzone"]:hover {{ border-color: {COLOR_GPS} !important; }}
+
+/* Buttons — normal size by default */
+.stButton button, .stFormSubmitButton button {{
+    background: {COLOR_GPS} !important; color: #FFFFFF !important; border: none !important;
+    border-radius: 7px !important; font-weight: 600 !important; font-size: 12px !important;
+    padding: 0.35rem 0.8rem !important; transition: transform 0.1s ease, opacity 0.1s ease;
+    box-shadow: 0 1px 3px rgba(14,165,233,0.3);
+}}
+.stButton button:hover, .stFormSubmitButton button:hover {{ opacity: 0.88; transform: translateY(-1px); }}
+
+/* Corrective-action buttons only — bigger, card-like, two-line label */
+.st-key-corrective_actions button {{
+    white-space: pre-line !important; line-height: 1.3 !important; min-height: 54px !important;
+    font-family: 'IBM Plex Mono', monospace !important; font-size: 11px !important; font-weight: 700 !important;
+    box-shadow: 0 2px 8px rgba(16,24,40,0.12);
+}}
+
+/* Corrective-action buttons colored by severity */
+[class*="st-key-actsev_critical"] button {{
+    background: linear-gradient(135deg, #F87171, #EF4444) !important; color: #FFF !important;
+}}
+[class*="st-key-actsev_warn"] button {{
+    background: linear-gradient(135deg, #FBBF24, #F59E0B) !important; color: #4A2E00 !important;
+}}
+[class*="st-key-actsev_watch"] button {{
+    background: linear-gradient(135deg, #FCD34D, #F59E0B) !important; color: #4A2E00 !important; opacity: 0.92;
+}}
+[class*="st-key-actsev_ok"] button {{
+    background: linear-gradient(135deg, #34D399, #10B981) !important; color: #FFF !important;
+}}
+
+/* Sidebar */
+[data-testid="stSidebar"] {{ background: {COLOR_PANEL} !important; border-right: 1px solid {COLOR_BORDER}; }}
+[data-testid="stSidebar"] img {{ border-radius: 6px; }}
+
+/* Captions */
+.stCaption, [data-testid="stCaptionContainer"] {{ color: {COLOR_MUTED} !important; font-family: 'IBM Plex Mono', monospace !important; }}
+
+/* Checkbox label */
+.stCheckbox label p {{ color: {COLOR_TEXT} !important; font-size: 13px !important; }}
+
+/* Alert boxes */
+[data-testid="stAlert"] {{ background: {COLOR_PANEL} !important; border: 1px solid {COLOR_BORDER} !important; border-radius: 8px; }}
+</style>
+""", unsafe_allow_html=True)
+
+ACTION_COLORS = {"critical": COLOR_CRIT, "warn": COLOR_WARN, "watch": COLOR_MIS, "ok": COLOR_OK}
+
+
+def kpi_card(container, icon, accent, label, value, delta_text=None, delta_positive=None, neutral=False):
+    if delta_text and neutral:
+        delta_html = f"<span class='kpi-delta' style='background:{COLOR_BORDER}; color:{COLOR_MUTED};'>{delta_text}</span>"
+    elif delta_text:
+        d_bg = "rgba(16,185,129,0.12)" if delta_positive else "rgba(239,68,68,0.12)"
+        d_color = COLOR_OK if delta_positive else COLOR_CRIT
+        arrow = "▲" if delta_positive else "▼"
+        delta_html = f"<span class='kpi-delta' style='background:{d_bg}; color:{d_color};'>{arrow} {delta_text}</span>"
+    else:
+        delta_html = ""
+    container.markdown(
+        f"<div class='kpi-card'>"
+        f"<div class='kpi-topbar' style='background:{accent};'></div>"
+        f"<div class='kpi-icon' style='background:{accent}22; color:{accent};'>{icon}</div>"
+        f"<div class='kpi-label'>{label}</div>"
+        f"<div class='kpi-value'>{value}</div>"
+        f"{delta_html}"
+        f"</div>",
+        unsafe_allow_html=True,
+    )
+
+
+
+# ---------------------------------------------------------------------------
 # Login credentials + company branding (stored on disk, editable at runtime)
 # ---------------------------------------------------------------------------
 CREDENTIALS_PATH = Path(__file__).parent / ".streamlit" / "credentials.json"
@@ -88,7 +233,7 @@ def check_login():
         return True
 
     st.markdown(
-        "<div style='color:#4FD1E8; font-family:\"IBM Plex Mono\",monospace; font-size:12px; letter-spacing:2px;'>FLEET TELEMETRY RECONCILIATION</div>"
+        "<div style='color:#0EA5E9; font-family:\"IBM Plex Mono\",monospace; font-size:12px; letter-spacing:2px;'>FLEET TELEMETRY RECONCILIATION</div>"
         "<h1 style='margin-top:2px;'>GPS vs MIS Dashboard</h1>",
         unsafe_allow_html=True,
     )
@@ -159,145 +304,6 @@ with st.sidebar:
                     creds["password"] = new_pw
                     save_credentials(creds)
                     st.success("Password updated — use it next time you log in.")
-
-# ---------------------------------------------------------------------------
-# Theme (dark, telemetry-style, matches the earlier web dashboard)
-# ---------------------------------------------------------------------------
-COLOR_BG = "#0B0F14"
-COLOR_PANEL = "#121822"
-COLOR_BORDER = "#232C38"
-COLOR_TEXT = "#E7ECF2"
-COLOR_MUTED = "#7C8A9A"
-COLOR_GPS = "#4FD1E8"
-COLOR_MIS = "#F5A623"
-COLOR_OK = "#3DDC84"
-COLOR_CRIT = "#FF5D5D"
-COLOR_WARN = "#F5A623"
-
-st.markdown(f"""
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
-
-html, body, [class*="css"] {{ font-family: 'Inter', sans-serif; font-size: 13px; }}
-.stApp {{ background-color: {COLOR_BG}; color: {COLOR_TEXT}; }}
-#MainMenu {{ visibility: hidden; }}
-footer {{ visibility: hidden; }}
-
-h1 {{ font-family: 'Space Grotesk', sans-serif !important; font-weight: 600 !important; color: {COLOR_TEXT} !important; font-size: 24px !important; }}
-h2, h3 {{ font-family: 'Space Grotesk', sans-serif !important; font-weight: 500 !important; color: {COLOR_TEXT} !important; font-size: 16px !important; }}
-h4 {{ font-family: 'Space Grotesk', sans-serif !important; font-weight: 500 !important; color: {COLOR_TEXT} !important; font-size: 14px !important; }}
-p, label, span, div {{ font-size: 13px; }}
-
-[data-testid="stMetric"] {{
-    background: {COLOR_PANEL}; border: 1px solid {COLOR_BORDER}; border-radius: 10px;
-    padding: 12px 16px; transition: transform 0.15s ease, box-shadow 0.15s ease;
-}}
-[data-testid="stMetric"]:hover {{ transform: translateY(-2px); }}
-[data-testid="stMetricLabel"] {{ color: {COLOR_MUTED} !important; font-size: 10px !important; letter-spacing: 0.5px; text-transform: uppercase; }}
-[data-testid="stMetricValue"] {{ color: {COLOR_TEXT} !important; font-family: 'IBM Plex Mono', monospace !important; font-size: 20px !important; }}
-[data-testid="stMetricDelta"] {{ font-family: 'IBM Plex Mono', monospace !important; font-size: 12px !important; }}
-
-/* KPI card accent colors */
-[class*="st-key-kpi_gps"] [data-testid="stMetric"] {{
-    border-left: 3px solid {COLOR_GPS} !important;
-    background: linear-gradient(135deg, rgba(79,209,232,0.10), {COLOR_PANEL} 60%) !important;
-    box-shadow: 0 0 16px rgba(79,209,232,0.06);
-}}
-[class*="st-key-kpi_mis"] [data-testid="stMetric"] {{
-    border-left: 3px solid {COLOR_MIS} !important;
-    background: linear-gradient(135deg, rgba(245,166,35,0.10), {COLOR_PANEL} 60%) !important;
-    box-shadow: 0 0 16px rgba(245,166,35,0.06);
-}}
-[class*="st-key-kpi_diff"] [data-testid="stMetric"] {{
-    border-left: 3px solid #C084FC !important;
-    background: linear-gradient(135deg, rgba(192,132,252,0.10), {COLOR_PANEL} 60%) !important;
-    box-shadow: 0 0 16px rgba(192,132,252,0.06);
-}}
-[class*="st-key-kpi_vehicles"] [data-testid="stMetric"] {{
-    border-left: 3px solid #60A5FA !important;
-    background: linear-gradient(135deg, rgba(96,165,250,0.10), {COLOR_PANEL} 60%) !important;
-    box-shadow: 0 0 16px rgba(96,165,250,0.06);
-}}
-[class*="st-key-kpi_flagged"] [data-testid="stMetric"] {{
-    border-left: 3px solid {COLOR_CRIT} !important;
-    background: linear-gradient(135deg, rgba(255,93,93,0.10), {COLOR_PANEL} 60%) !important;
-    box-shadow: 0 0 16px rgba(255,93,93,0.06);
-}}
-
-.action-card {{
-    background: {COLOR_PANEL}; border: 1px solid {COLOR_BORDER}; border-radius: 8px;
-    padding: 10px 14px; margin-bottom: 6px;
-}}
-
-/* Dataframe / tables */
-.stDataFrame, [data-testid="stDataFrame"] {{
-    border: 1px solid {COLOR_BORDER} !important; border-radius: 10px !important; overflow: hidden;
-}}
-[data-testid="stDataFrame"] * {{ font-family: 'IBM Plex Mono', monospace !important; font-size: 11px !important; }}
-
-/* Inputs */
-.stTextInput input, .stSelectbox [data-baseweb="select"] > div, .stTextInput > div > div {{
-    background: {COLOR_PANEL} !important; border: 1px solid {COLOR_BORDER} !important;
-    color: {COLOR_TEXT} !important; border-radius: 7px !important; font-size: 13px !important;
-}}
-.stSlider [data-baseweb="slider"] {{ padding-top: 6px; }}
-.stSlider [role="slider"] {{ background: {COLOR_MIS} !important; box-shadow: 0 0 8px rgba(245,166,35,0.5) !important; }}
-.stSlider div[data-baseweb="slider"] > div > div {{ background: linear-gradient(90deg, {COLOR_GPS}, {COLOR_MIS}) !important; }}
-
-/* File uploader */
-[data-testid="stFileUploaderDropzone"] {{
-    background: linear-gradient(135deg, rgba(79,209,232,0.05), {COLOR_PANEL} 70%) !important;
-    border: 1.5px dashed {COLOR_BORDER} !important; border-radius: 12px !important;
-    transition: border-color 0.15s ease;
-}}
-[data-testid="stFileUploaderDropzone"]:hover {{ border-color: {COLOR_GPS} !important; }}
-
-/* Buttons — normal size by default */
-.stButton button, .stFormSubmitButton button {{
-    background: {COLOR_GPS} !important; color: {COLOR_BG} !important; border: none !important;
-    border-radius: 7px !important; font-weight: 500 !important; font-size: 12px !important;
-    padding: 0.35rem 0.8rem !important; transition: transform 0.1s ease, opacity 0.1s ease;
-}}
-.stButton button:hover, .stFormSubmitButton button:hover {{ opacity: 0.85; transform: translateY(-1px); }}
-
-/* Corrective-action buttons only — bigger, card-like, two-line label */
-.st-key-corrective_actions button {{
-    white-space: pre-line !important; line-height: 1.3 !important; min-height: 54px !important;
-    font-family: 'IBM Plex Mono', monospace !important; font-size: 11px !important; font-weight: 600 !important;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.25);
-}}
-
-/* Corrective-action buttons colored by severity */
-[class*="st-key-actsev_critical"] button {{
-    background: linear-gradient(135deg, #FF6B6B, #E14545) !important; color: #FFF !important;
-}}
-[class*="st-key-actsev_warn"] button {{
-    background: linear-gradient(135deg, #FFC259, #E8971F) !important; color: #241800 !important;
-}}
-[class*="st-key-actsev_watch"] button {{
-    background: linear-gradient(135deg, #FFD98A, #E8971F) !important; color: #241800 !important; opacity: 0.92;
-}}
-[class*="st-key-actsev_ok"] button {{
-    background: linear-gradient(135deg, #5EEBA0, #2BB86B) !important; color: #06210F !important;
-}}
-
-/* Sidebar */
-[data-testid="stSidebar"] {{ background: {COLOR_PANEL} !important; border-right: 1px solid {COLOR_BORDER}; }}
-[data-testid="stSidebar"] img {{ border-radius: 6px; }}
-
-/* Captions */
-.stCaption, [data-testid="stCaptionContainer"] {{ color: {COLOR_MUTED} !important; font-family: 'IBM Plex Mono', monospace !important; }}
-
-/* Checkbox label */
-.stCheckbox label p {{ color: {COLOR_TEXT} !important; font-size: 13px !important; }}
-
-/* Alert boxes */
-[data-testid="stAlert"] {{ background: {COLOR_PANEL} !important; border: 1px solid {COLOR_BORDER} !important; border-radius: 8px; }}
-</style>
-""", unsafe_allow_html=True)
-
-ACTION_COLORS = {"critical": COLOR_CRIT, "warn": COLOR_WARN, "watch": COLOR_MIS, "ok": COLOR_OK}
-
 
 # ---------------------------------------------------------------------------
 # Parsing
@@ -529,21 +535,18 @@ else:
     st.caption("No previous month saved yet to compare against — once you save another month, comparisons will show here automatically.")
 
 c1, c2, c3, c4, c5 = st.columns(5)
-with c1:
-    with st.container(key="kpi_gps"):
-        st.metric("Total GPS km", f"{total_gps:,.0f}", gps_delta_label)
-with c2:
-    with st.container(key="kpi_mis"):
-        st.metric("Total MIS km", f"{total_mis:,.0f}", mis_delta_label)
-with c3:
-    with st.container(key="kpi_diff"):
-        st.metric("Overall Diff", f"{overall_pct*100:.1f}%", f"{overall_diff:+,.0f} km")
-with c4:
-    with st.container(key="kpi_vehicles"):
-        st.metric("Vehicles", f"{len(df)}", f"{df['Site'].nunique()} sites")
-with c5:
-    with st.container(key="kpi_flagged"):
-        st.metric("Flagged", f"{flagged}", f"{flagged/len(df)*100:.0f}% of fleet")
+gps_positive = prev_entry is not None and (total_gps - prev_entry["total_gps"]) >= 0
+mis_positive = prev_entry is not None and (total_mis - prev_entry["total_mis"]) >= 0
+kpi_card(c1, "📡", COLOR_GPS, "TOTAL GPS KM", f"{total_gps:,.0f}",
+         gps_delta_label.replace(" km", "") if gps_delta_label else None, gps_positive)
+kpi_card(c2, "📝", COLOR_MIS, "TOTAL MIS KM", f"{total_mis:,.0f}",
+         mis_delta_label.replace(" km", "") if mis_delta_label else None, mis_positive)
+kpi_card(c3, "⚠️", COLOR_DIFF, "OVERALL DIFF", f"{overall_pct*100:.1f}%",
+         f"{overall_diff:+,.0f} km", overall_diff >= 0)
+kpi_card(c4, "🚚", COLOR_VEHICLES, "VEHICLES", f"{len(df)}",
+         f"{df['Site'].nunique()} sites", neutral=True)
+kpi_card(c5, "🚩", COLOR_CRIT, "FLAGGED", f"{flagged}",
+         f"{flagged/len(df)*100:.0f}% of fleet", neutral=True)
 
 if has_daily:
     st.markdown("### Day-wise total km, all vehicles")
@@ -593,31 +596,44 @@ site_bar_colors = site_summary["Severity"].map(ACTION_COLORS)
 n_sites = len(site_summary)
 bar_height = max(320, n_sites * 30)
 
-# --- Chart 1: GPS vs MIS volume by site (horizontal, sorted by GPS volume) ---
-vol_sorted = site_summary.sort_values("Total_GPS", ascending=True)
-fig_sites = go.Figure()
-fig_sites.add_trace(go.Bar(
-    y=vol_sorted["Site"], x=vol_sorted["Total_GPS"], name="GPS", orientation="h",
-    marker_color=COLOR_GPS, text=vol_sorted["Total_GPS"].apply(lambda v: f"{v:,.0f}"),
-    textposition="outside", textfont=dict(size=11, color=COLOR_TEXT, family="IBM Plex Mono"),
-    hovertemplate="%{y}<br>GPS: %{x:,.0f} km<extra></extra>",
-))
-fig_sites.add_trace(go.Bar(
-    y=vol_sorted["Site"], x=vol_sorted["Total_MIS"], name="MIS", orientation="h",
-    marker_color=COLOR_MIS, text=vol_sorted["Total_MIS"].apply(lambda v: f"{v:,.0f}"),
-    textposition="outside", textfont=dict(size=11, color=COLOR_TEXT, family="IBM Plex Mono"),
-    hovertemplate="%{y}<br>MIS: %{x:,.0f} km<extra></extra>",
-))
-fig_sites.update_layout(
-    barmode="group", plot_bgcolor=COLOR_PANEL, paper_bgcolor=COLOR_BG, font_color=COLOR_TEXT,
-    height=bar_height, margin=dict(l=10, r=60, t=10, b=30),
-    xaxis=dict(gridcolor=COLOR_BORDER, title="Km", tickfont=dict(size=11)),
-    yaxis=dict(tickfont=dict(size=12, family="Inter"), automargin=True),
-    legend=dict(orientation="h", y=1.03, x=0, font=dict(size=12)),
-    bargap=0.28, bargroupgap=0.08,
-)
-st.caption("GPS vs MIS total km by site — sorted by GPS volume")
-st.plotly_chart(fig_sites, use_container_width=True)
+# --- Chart 1: GPS vs MIS volume by site (split into two columns to keep it compact) ---
+def make_site_volume_chart(data, chart_height):
+    fig = go.Figure()
+    fig.add_trace(go.Bar(
+        y=data["Site"], x=data["Total_GPS"], name="GPS", orientation="h",
+        marker_color=COLOR_GPS, text=data["Total_GPS"].apply(lambda v: f"{v:,.0f}"),
+        textposition="outside", textfont=dict(size=10, color=COLOR_TEXT, family="IBM Plex Mono"),
+        hovertemplate="%{y}<br>GPS: %{x:,.0f} km<extra></extra>",
+    ))
+    fig.add_trace(go.Bar(
+        y=data["Site"], x=data["Total_MIS"], name="MIS", orientation="h",
+        marker_color=COLOR_MIS, text=data["Total_MIS"].apply(lambda v: f"{v:,.0f}"),
+        textposition="outside", textfont=dict(size=10, color=COLOR_TEXT, family="IBM Plex Mono"),
+        hovertemplate="%{y}<br>MIS: %{x:,.0f} km<extra></extra>",
+    ))
+    fig.update_layout(
+        barmode="group", plot_bgcolor=COLOR_PANEL, paper_bgcolor=COLOR_BG, font_color=COLOR_TEXT,
+        height=chart_height, margin=dict(l=10, r=50, t=10, b=30),
+        xaxis=dict(gridcolor=COLOR_BORDER, title="Km", tickfont=dict(size=10)),
+        yaxis=dict(tickfont=dict(size=11, family="Inter"), automargin=True),
+        legend=dict(orientation="h", y=1.05, x=0, font=dict(size=11)),
+        bargap=0.28, bargroupgap=0.08,
+    )
+    return fig
+
+
+vol_desc = site_summary.sort_values("Total_GPS", ascending=False).reset_index(drop=True)
+half = (n_sites + 1) // 2
+top_half = vol_desc.iloc[:half].sort_values("Total_GPS", ascending=True)
+bottom_half = vol_desc.iloc[half:].sort_values("Total_GPS", ascending=True)
+half_height = max(280, max(len(top_half), len(bottom_half)) * 30)
+
+st.caption("GPS vs MIS total km by site — sorted by GPS volume, split into two for readability")
+col_v1, col_v2 = st.columns(2)
+with col_v1:
+    st.plotly_chart(make_site_volume_chart(top_half, half_height), use_container_width=True)
+with col_v2:
+    st.plotly_chart(make_site_volume_chart(bottom_half, half_height), use_container_width=True)
 
 # --- Chart 2: Diff % by site (vertical bars, colored by severity) ---
 site_bar_colors = site_summary["Severity"].map(ACTION_COLORS)
