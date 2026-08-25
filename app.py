@@ -37,7 +37,7 @@ COLOR_BG = "#F4F6F9"
 COLOR_PANEL = "#FFFFFF"
 COLOR_BORDER = "#E5E8EC"
 COLOR_TEXT = "#1F2733"
-COLOR_MUTED = "#6B7684"
+COLOR_MUTED = "#4B5768"
 COLOR_GPS = "#0EA5E9"
 COLOR_MIS = "#F59E0B"
 COLOR_OK = "#10B981"
@@ -56,9 +56,15 @@ html, body, [class*="css"] {{ font-family: 'Inter', sans-serif; font-size: 13px;
 footer {{ visibility: hidden; }}
 
 h1 {{ font-family: 'Space Grotesk', sans-serif !important; font-weight: 700 !important; color: {COLOR_TEXT} !important; font-size: 26px !important; }}
-h2, h3 {{ font-family: 'Space Grotesk', sans-serif !important; font-weight: 600 !important; color: {COLOR_TEXT} !important; font-size: 17px !important; }}
-h4 {{ font-family: 'Space Grotesk', sans-serif !important; font-weight: 600 !important; color: {COLOR_TEXT} !important; font-size: 14px !important; }}
-p, label, span, div {{ font-size: 13px; }}
+h2, h3 {{ font-family: 'Space Grotesk', sans-serif !important; font-weight: 700 !important; color: {COLOR_TEXT} !important; font-size: 18px !important; }}
+h4 {{ font-family: 'Space Grotesk', sans-serif !important; font-weight: 700 !important; color: {COLOR_TEXT} !important; font-size: 14px !important; }}
+p, label, span, div {{ font-size: 13px; font-weight: 500; }}
+
+/* Widget labels (Viewing, Flag threshold, Search, etc.) — bold and dark */
+[data-testid="stWidgetLabel"] p, [data-testid="stWidgetLabel"] label {{
+    font-weight: 700 !important; color: {COLOR_TEXT} !important; font-size: 13px !important;
+}}
+[data-testid="stMarkdownContainer"] p {{ font-weight: 500; color: {COLOR_TEXT}; }}
 
 /* Custom KPI cards */
 .kpi-card {{
@@ -72,14 +78,20 @@ p, label, span, div {{ font-size: 13px; }}
     width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center;
     justify-content: center; font-size: 18px; margin-bottom: 14px;
 }}
-.kpi-label {{ color: {COLOR_MUTED}; font-size: 11px; letter-spacing: 0.6px; text-transform: uppercase; font-weight: 600; margin-bottom: 4px; }}
-.kpi-value {{ color: {COLOR_TEXT}; font-family: 'IBM Plex Mono', monospace; font-size: 24px; font-weight: 600; margin-bottom: 8px; }}
-.kpi-delta {{ display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 20px; font-family: 'IBM Plex Mono', monospace; }}
+.kpi-label {{ color: {COLOR_MUTED}; font-size: 11px; letter-spacing: 0.6px; text-transform: uppercase; font-weight: 700; margin-bottom: 4px; }}
+.kpi-value {{ color: {COLOR_TEXT}; font-family: 'IBM Plex Mono', monospace; font-size: 26px; font-weight: 700; margin-bottom: 8px; }}
+.kpi-delta {{ display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 20px; font-family: 'IBM Plex Mono', monospace; }}
 
 .action-card {{
     background: {COLOR_PANEL}; border: 1px solid {COLOR_BORDER}; border-radius: 8px;
     padding: 10px 14px; margin-bottom: 6px;
 }}
+
+/* Native bordered containers (used to box charts) — match KPI card styling */
+[data-testid="stVerticalBlockBorderWrapper"] {{
+    border-radius: 12px !important; box-shadow: 0 1px 3px rgba(16,24,40,0.06);
+}}
+[data-testid="stVerticalBlockBorderWrapper"] > div {{ border-color: {COLOR_BORDER} !important; }}
 
 /* Dataframe / tables */
 .stDataFrame, [data-testid="stDataFrame"] {{
@@ -139,7 +151,7 @@ p, label, span, div {{ font-size: 13px; }}
 [data-testid="stSidebar"] img {{ border-radius: 6px; }}
 
 /* Captions */
-.stCaption, [data-testid="stCaptionContainer"] {{ color: {COLOR_MUTED} !important; font-family: 'IBM Plex Mono', monospace !important; }}
+.stCaption, [data-testid="stCaptionContainer"] {{ color: {COLOR_MUTED} !important; font-family: 'IBM Plex Mono', monospace !important; font-weight: 600 !important; font-size: 12px !important; }}
 
 /* Checkbox label */
 .stCheckbox label p {{ color: {COLOR_TEXT} !important; font-size: 13px !important; }}
@@ -563,14 +575,15 @@ if has_daily:
         hovertemplate="Day %{x}<br>MIS: %{y:,.0f} km<extra></extra>",
     ))
     fig.update_layout(
-        plot_bgcolor=COLOR_PANEL, paper_bgcolor=COLOR_BG, font_color=COLOR_TEXT,
+        plot_bgcolor=COLOR_PANEL, paper_bgcolor=COLOR_PANEL, font_color=COLOR_TEXT,
         height=300, margin=dict(l=10, r=10, t=10, b=10),
         xaxis=dict(gridcolor=COLOR_BORDER, title="Day of month", tickfont=dict(size=11), dtick=2),
         yaxis=dict(gridcolor=COLOR_BORDER, title="Km", tickfont=dict(size=11)),
         legend=dict(orientation="h", y=1.12, font=dict(size=12)),
         hovermode="x unified",
     )
-    st.plotly_chart(fig, use_container_width=True)
+    with st.container(border=True):
+        st.plotly_chart(fig, use_container_width=True, key="chart_day_trend")
 
 st.markdown("### Sites")
 site_summary = df.groupby("Site", as_index=False).agg(
@@ -612,7 +625,7 @@ def make_site_volume_chart(data, chart_height):
         hovertemplate="%{y}<br>MIS: %{x:,.0f} km<extra></extra>",
     ))
     fig.update_layout(
-        barmode="group", plot_bgcolor=COLOR_PANEL, paper_bgcolor=COLOR_BG, font_color=COLOR_TEXT,
+        barmode="group", plot_bgcolor=COLOR_PANEL, paper_bgcolor=COLOR_PANEL, font_color=COLOR_TEXT,
         height=chart_height, margin=dict(l=10, r=50, t=10, b=30),
         xaxis=dict(gridcolor=COLOR_BORDER, title="Km", tickfont=dict(size=10)),
         yaxis=dict(tickfont=dict(size=11, family="Inter"), automargin=True),
@@ -622,18 +635,11 @@ def make_site_volume_chart(data, chart_height):
     return fig
 
 
-vol_desc = site_summary.sort_values("Total_GPS", ascending=False).reset_index(drop=True)
-half = (n_sites + 1) // 2
-top_half = vol_desc.iloc[:half].sort_values("Total_GPS", ascending=True)
-bottom_half = vol_desc.iloc[half:].sort_values("Total_GPS", ascending=True)
-half_height = max(280, max(len(top_half), len(bottom_half)) * 30)
+vol_sorted = site_summary.sort_values("Total_GPS", ascending=True)
 
-st.caption("GPS vs MIS total km by site — sorted by GPS volume, split into two for readability")
-col_v1, col_v2 = st.columns(2)
-with col_v1:
-    st.plotly_chart(make_site_volume_chart(top_half, half_height), use_container_width=True)
-with col_v2:
-    st.plotly_chart(make_site_volume_chart(bottom_half, half_height), use_container_width=True)
+st.caption("GPS vs MIS total km by site — sorted by GPS volume, scroll inside the box to see all sites")
+with st.container(height=480, border=True):
+    st.plotly_chart(make_site_volume_chart(vol_sorted, bar_height), use_container_width=True, key="chart_sites_vol")
 
 # --- Chart 2: Diff % by site (vertical bars, colored by severity) ---
 site_bar_colors = site_summary["Severity"].map(ACTION_COLORS)
@@ -643,12 +649,13 @@ fig_sites_diff.add_trace(go.Bar(
     marker_color=site_bar_colors, name="Diff %",
 ))
 fig_sites_diff.update_layout(
-    plot_bgcolor=COLOR_PANEL, paper_bgcolor=COLOR_BG, font_color=COLOR_TEXT,
+    plot_bgcolor=COLOR_PANEL, paper_bgcolor=COLOR_PANEL, font_color=COLOR_TEXT,
     height=220, margin=dict(l=10, r=10, t=10, b=10),
     xaxis=dict(gridcolor=COLOR_BORDER, tickangle=-35), yaxis=dict(gridcolor=COLOR_BORDER, title="Diff %"),
     showlegend=False,
 )
-st.plotly_chart(fig_sites_diff, use_container_width=True)
+with st.container(border=True):
+    st.plotly_chart(fig_sites_diff, use_container_width=True, key="chart_sites_diff")
 
 site_options = ["All sites"] + site_summary["Site"].tolist()
 selected_site = st.selectbox("Filter by site", site_options)
@@ -794,14 +801,15 @@ if veh_pick:
             hovertemplate="Day %{x}<br>MIS: %{y:,.1f} km<extra></extra>",
         ))
         fig2.update_layout(
-            plot_bgcolor=COLOR_PANEL, paper_bgcolor=COLOR_BG, font_color=COLOR_TEXT,
+            plot_bgcolor=COLOR_PANEL, paper_bgcolor=COLOR_PANEL, font_color=COLOR_TEXT,
             height=260, margin=dict(l=10, r=10, t=10, b=10),
             xaxis=dict(gridcolor=COLOR_BORDER, title="Day of month", tickfont=dict(size=11), dtick=2),
             yaxis=dict(gridcolor=COLOR_BORDER, title="Km", tickfont=dict(size=11)),
             legend=dict(orientation="h", y=1.12, font=dict(size=12)),
             hovermode="x unified",
         )
-        st.plotly_chart(fig2, use_container_width=True)
+        with st.container(border=True):
+            st.plotly_chart(fig2, use_container_width=True, key="chart_vehicle_drilldown")
     else:
         st.caption("Daily chart isn't available for saved history months — only totals are stored.")
 
@@ -827,12 +835,13 @@ if hist:
     fig3.add_trace(go.Scatter(x=hist_df["Month"], y=hist_df["Total GPS"], name="GPS", line=dict(color=COLOR_GPS, width=2), mode="lines+markers"))
     fig3.add_trace(go.Scatter(x=hist_df["Month"], y=hist_df["Total MIS"], name="MIS", line=dict(color=COLOR_MIS, width=2), mode="lines+markers"))
     fig3.update_layout(
-        plot_bgcolor=COLOR_PANEL, paper_bgcolor=COLOR_BG, font_color=COLOR_TEXT,
+        plot_bgcolor=COLOR_PANEL, paper_bgcolor=COLOR_PANEL, font_color=COLOR_TEXT,
         height=260, margin=dict(l=10, r=10, t=10, b=10),
         xaxis=dict(gridcolor=COLOR_BORDER), yaxis=dict(gridcolor=COLOR_BORDER),
         legend=dict(orientation="h", y=1.15),
     )
-    st.plotly_chart(fig3, use_container_width=True)
+    with st.container(border=True):
+        st.plotly_chart(fig3, use_container_width=True, key="chart_monthly_history")
 
     st.dataframe(
         hist_df.style.format({"Total GPS": "{:,.0f}", "Total MIS": "{:,.0f}", "Diff %": "{:.1%}"}),
