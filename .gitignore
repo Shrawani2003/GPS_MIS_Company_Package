@@ -1,0 +1,20 @@
+# Sensitive/local files — never commit these
+.streamlit/credentials.json
+.streamlit/secrets.toml
+.streamlit/logo.png
+history.json
+credentials.json
+
+# Node
+node_modules/
+dist/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# OS junk
+.DS_Store
+Thumbs.db
