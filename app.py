@@ -33,34 +33,25 @@ st.set_page_config(page_title="GPS vs MIS Fleet Dashboard", layout="wide", page_
 # ---------------------------------------------------------------------------
 # Theme (light, clean SaaS-dashboard style — white cards, colored top borders)
 # ---------------------------------------------------------------------------
-COLOR_BG = "#F9F9F7"
-COLOR_PANEL = "#FCFCFB"
-COLOR_BORDER = "#E1E0D9"
-COLOR_TEXT = "#0B0B0B"
-COLOR_MUTED = "#52514E"
-COLOR_GPS = "#2A78D6"
-COLOR_MIS = "#EB6834"
-COLOR_OK = "#0CA30C"
-COLOR_CRIT = "#D03B3B"
-COLOR_WARN = "#FAB219"
-COLOR_SERIOUS = "#EC835A"
-COLOR_DIFF = "#4A3AA7"
-COLOR_VEHICLES = "#1BAF7A"
-
-
-def hex_to_rgb(h):
-    h = h.lstrip("#")
-    return ",".join(str(int(h[i:i + 2], 16)) for i in (0, 2, 4))
+COLOR_BG = "#F4F6F9"
+COLOR_PANEL = "#FFFFFF"
+COLOR_BORDER = "#E5E8EC"
+COLOR_TEXT = "#1F2733"
+COLOR_MUTED = "#4B5768"
+COLOR_GPS = "#0EA5E9"
+COLOR_MIS = "#F59E0B"
+COLOR_OK = "#10B981"
+COLOR_CRIT = "#EF4444"
+COLOR_WARN = "#F59E0B"
+COLOR_DIFF = "#8B5CF6"
+COLOR_VEHICLES = "#3B82F6"
 
 st.markdown(f"""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
 
 html, body, [class*="css"] {{ font-family: 'Inter', sans-serif; font-size: 13px; }}
-.stApp {{
-    background: linear-gradient(135deg, rgba(42,120,214,0.07) 0%, {COLOR_BG} 32%, {COLOR_BG} 68%, rgba(235,104,52,0.07) 100%);
-    color: {COLOR_TEXT};
-}}
+.stApp {{ background-color: {COLOR_BG}; color: {COLOR_TEXT}; }}
 #MainMenu {{ visibility: hidden; }}
 footer {{ visibility: hidden; }}
 
@@ -77,17 +68,12 @@ p, label, span, div {{ font-size: 13px; font-weight: 500; }}
 
 /* Custom KPI cards */
 .kpi-card {{
-    background: linear-gradient(160deg, rgba(var(--accent-rgb),0.12) 0%, {COLOR_PANEL} 60%);
-    border: 1px solid rgba(var(--accent-rgb),0.28); border-radius: 12px;
+    background: {COLOR_PANEL}; border: 1px solid {COLOR_BORDER}; border-radius: 12px;
     padding: 18px 18px 16px; position: relative; overflow: hidden;
-    box-shadow: 0 2px 8px rgba(var(--accent-rgb),0.10); transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+    box-shadow: 0 1px 3px rgba(16,24,40,0.06); transition: transform 0.15s ease, box-shadow 0.15s ease;
 }}
-.kpi-card:hover {{
-    transform: translateY(-3px);
-    border-color: rgba(var(--accent-rgb), 0.35);
-    box-shadow: 0 10px 24px rgba(var(--accent-rgb), 0.20), 0 2px 8px rgba(11,11,11,0.08);
-}}
-.kpi-topbar {{ position: absolute; top: 0; left: 0; right: 0; height: 5px; }}
+.kpi-card:hover {{ transform: translateY(-2px); box-shadow: 0 6px 16px rgba(16,24,40,0.10); }}
+.kpi-topbar {{ position: absolute; top: 0; left: 0; right: 0; height: 4px; }}
 .kpi-icon {{
     width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center;
     justify-content: center; font-size: 18px; margin-bottom: 14px;
@@ -148,16 +134,16 @@ p, label, span, div {{ font-size: 13px; font-weight: 500; }}
 
 /* Corrective-action buttons colored by severity */
 [class*="st-key-actsev_critical"] button {{
-    background: linear-gradient(135deg, #E17878, #D03B3B) !important; color: #FFF !important;
+    background: linear-gradient(135deg, #F87171, #EF4444) !important; color: #FFF !important;
 }}
 [class*="st-key-actsev_warn"] button {{
-    background: linear-gradient(135deg, #F5AE8E, #EC835A) !important; color: #5C2A12 !important;
+    background: linear-gradient(135deg, #FBBF24, #F59E0B) !important; color: #4A2E00 !important;
 }}
 [class*="st-key-actsev_watch"] button {{
-    background: linear-gradient(135deg, #FCCB66, #FAB219) !important; color: #5C3A00 !important; opacity: 0.94;
+    background: linear-gradient(135deg, #FCD34D, #F59E0B) !important; color: #4A2E00 !important; opacity: 0.92;
 }}
 [class*="st-key-actsev_ok"] button {{
-    background: linear-gradient(135deg, #4FD84F, #0CA30C) !important; color: #FFF !important;
+    background: linear-gradient(135deg, #34D399, #10B981) !important; color: #FFF !important;
 }}
 
 /* Sidebar */
@@ -175,29 +161,23 @@ p, label, span, div {{ font-size: 13px; font-weight: 500; }}
 </style>
 """, unsafe_allow_html=True)
 
-ACTION_COLORS = {"critical": COLOR_CRIT, "warn": COLOR_SERIOUS, "watch": COLOR_WARN, "ok": COLOR_OK}
-ACTION_BG = {
-    "critical": "rgba(208,59,59,0.14)",
-    "warn": "rgba(236,131,90,0.16)",
-    "watch": "rgba(250,178,25,0.16)",
-    "ok": "rgba(12,163,12,0.12)",
-}
+ACTION_COLORS = {"critical": COLOR_CRIT, "warn": COLOR_WARN, "watch": COLOR_MIS, "ok": COLOR_OK}
 
 
 def kpi_card(container, icon, accent, label, value, delta_text=None, delta_positive=None, neutral=False):
     if delta_text and neutral:
         delta_html = f"<span class='kpi-delta' style='background:{COLOR_BORDER}; color:{COLOR_MUTED};'>{delta_text}</span>"
     elif delta_text:
-        d_bg = "rgba(12,163,12,0.12)" if delta_positive else "rgba(208,59,59,0.12)"
+        d_bg = "rgba(16,185,129,0.12)" if delta_positive else "rgba(239,68,68,0.12)"
         d_color = COLOR_OK if delta_positive else COLOR_CRIT
         arrow = "▲" if delta_positive else "▼"
         delta_html = f"<span class='kpi-delta' style='background:{d_bg}; color:{d_color};'>{arrow} {delta_text}</span>"
     else:
         delta_html = ""
     container.markdown(
-        f"<div class='kpi-card' style='--accent-rgb:{hex_to_rgb(accent)};'>"
+        f"<div class='kpi-card'>"
         f"<div class='kpi-topbar' style='background:{accent};'></div>"
-        f"<div class='kpi-icon' style='background:linear-gradient(135deg,{accent}33,{accent}14); color:{accent};'>{icon}</div>"
+        f"<div class='kpi-icon' style='background:{accent}22; color:{accent};'>{icon}</div>"
         f"<div class='kpi-label'>{label}</div>"
         f"<div class='kpi-value'>{value}</div>"
         f"{delta_html}"
@@ -265,7 +245,7 @@ def check_login():
         return True
 
     st.markdown(
-        f"<div style='color:{COLOR_GPS}; font-family:\"IBM Plex Mono\",monospace; font-size:12px; letter-spacing:2px;'>FLEET TELEMETRY RECONCILIATION</div>"
+        "<div style='color:#0EA5E9; font-family:\"IBM Plex Mono\",monospace; font-size:12px; letter-spacing:2px;'>FLEET TELEMETRY RECONCILIATION</div>"
         "<h1 style='margin-top:2px;'>GPS vs MIS Dashboard</h1>",
         unsafe_allow_html=True,
     )
@@ -586,12 +566,12 @@ if has_daily:
     fig = go.Figure()
     fig.add_trace(go.Scatter(
         x=trend["Day"], y=trend["GPS"], name="GPS", mode="lines+markers",
-        line=dict(color=COLOR_GPS, width=2.5), marker=dict(size=6, line=dict(width=1, color=COLOR_PANEL)),
+        line=dict(color=COLOR_GPS, width=2.5), marker=dict(size=5),
         hovertemplate="Day %{x}<br>GPS: %{y:,.0f} km<extra></extra>",
     ))
     fig.add_trace(go.Scatter(
         x=trend["Day"], y=trend["MIS"], name="MIS", mode="lines+markers",
-        line=dict(color=COLOR_MIS, width=2.5), marker=dict(size=6, line=dict(width=1, color=COLOR_PANEL)),
+        line=dict(color=COLOR_MIS, width=2.5), marker=dict(size=5),
         hovertemplate="Day %{x}<br>MIS: %{y:,.0f} km<extra></extra>",
     ))
     fig.update_layout(
@@ -683,15 +663,14 @@ selected_site = st.selectbox("Filter by site", site_options)
 
 def style_site_row(row):
     color = ACTION_COLORS.get(row["Severity"], COLOR_TEXT)
-    bg = ACTION_BG.get(row["Severity"], "")
     styles = []
     for col in row.index:
         if col == "Total_GPS":
-            styles.append(f"color: {COLOR_GPS}; font-weight: 600;")
+            styles.append(f"color: {COLOR_GPS};")
         elif col == "Total_MIS":
-            styles.append(f"color: {COLOR_MIS}; font-weight: 600;")
+            styles.append(f"color: {COLOR_MIS};")
         elif col == "Diff %":
-            styles.append(f"color: {color}; background-color: {bg}; font-weight: 700; border-radius: 5px;")
+            styles.append(f"color: {color}; font-weight: 600;")
         else:
             styles.append("")
     return styles
@@ -762,6 +741,13 @@ st.caption(f"{len(view)} vehicles")
 display_cols = ["Vehicle", "Site", "Total GPS", "Total MIS", "Diff %", "Action", "Source", "Severity"]
 display_df = view[display_cols]
 
+ACTION_BG = {
+    "critical": "rgba(255,93,93,0.16)",
+    "warn": "rgba(245,166,35,0.16)",
+    "watch": "rgba(245,166,35,0.10)",
+    "ok": "rgba(61,220,132,0.14)",
+}
+
 
 def style_row(row):
     color = ACTION_COLORS.get(row["Severity"], COLOR_TEXT)
@@ -806,12 +792,12 @@ if veh_pick:
         fig2 = go.Figure()
         fig2.add_trace(go.Scatter(
             x=vd["Day"], y=vd["GPS"], name="GPS", mode="lines+markers",
-            line=dict(color=COLOR_GPS, width=2.5), marker=dict(size=6, line=dict(width=1, color=COLOR_PANEL)),
+            line=dict(color=COLOR_GPS, width=2.5), marker=dict(size=5),
             hovertemplate="Day %{x}<br>GPS: %{y:,.1f} km<extra></extra>",
         ))
         fig2.add_trace(go.Scatter(
             x=vd["Day"], y=vd["MIS"], name="MIS", mode="lines+markers",
-            line=dict(color=COLOR_MIS, width=2.5), marker=dict(size=6, line=dict(width=1, color=COLOR_PANEL)),
+            line=dict(color=COLOR_MIS, width=2.5), marker=dict(size=5),
             hovertemplate="Day %{x}<br>MIS: %{y:,.1f} km<extra></extra>",
         ))
         fig2.update_layout(
@@ -846,8 +832,8 @@ if hist:
     } for e in sorted_entries])
 
     fig3 = go.Figure()
-    fig3.add_trace(go.Scatter(x=hist_df["Month"], y=hist_df["Total GPS"], name="GPS", line=dict(color=COLOR_GPS, width=2.5), mode="lines+markers", marker=dict(size=7, line=dict(width=1, color=COLOR_PANEL))))
-    fig3.add_trace(go.Scatter(x=hist_df["Month"], y=hist_df["Total MIS"], name="MIS", line=dict(color=COLOR_MIS, width=2.5), mode="lines+markers", marker=dict(size=7, line=dict(width=1, color=COLOR_PANEL))))
+    fig3.add_trace(go.Scatter(x=hist_df["Month"], y=hist_df["Total GPS"], name="GPS", line=dict(color=COLOR_GPS, width=2), mode="lines+markers"))
+    fig3.add_trace(go.Scatter(x=hist_df["Month"], y=hist_df["Total MIS"], name="MIS", line=dict(color=COLOR_MIS, width=2), mode="lines+markers"))
     fig3.update_layout(
         plot_bgcolor=COLOR_PANEL, paper_bgcolor=COLOR_PANEL, font_color=COLOR_TEXT,
         height=260, margin=dict(l=10, r=10, t=10, b=10),
@@ -868,5 +854,4 @@ if hist:
             key_to_delete = next(e["key"] for e in sorted_entries if e["label"] == del_choice)
             del hist[key_to_delete]
             save_history(hist)
-            st.success(f"Removed {del_choice}.")
-            st.rerun()
+            st.success(f"Removed {del_choice}. Refresh the page to see the updated list.")

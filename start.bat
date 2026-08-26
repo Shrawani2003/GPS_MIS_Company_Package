@@ -37,14 +37,11 @@ if not exist ".streamlit\credentials.json" (
     set /p ADMIN_PASS=Choose an admin password:
     if not exist ".streamlit" mkdir ".streamlit"
     > ".streamlit\credentials.json" (
-        echo {
-        echo   "username": "!ADMIN_USER!",
-        echo   "password": "!ADMIN_PASS!"
-        echo }
+        echo {"username": "!ADMIN_USER!", "password": "!ADMIN_PASS!"}
     )
     echo.
     echo Saved. You will use this username/password to log in from now on.
-    echo ^(To change it later, use "Change password" in the app sidebar after logging in.^)
+    echo ^(To change it later, edit .streamlit\credentials.json in this folder.^)
     echo.
 )
 

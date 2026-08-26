@@ -2,7 +2,9 @@
 
 A private dashboard, protected by a single admin login, that runs on your
 own machine or company server. Gives you a URL that works on your
-**company Wi-Fi / LAN only** — never touches the public internet.
+**company Wi-Fi / LAN only** — never touches the public internet. Can also
+be deployed to Streamlit Community Cloud for an internet-reachable,
+login-protected URL (see the bottom of this file).
 
 ## Easiest way to run it: double-click `start.bat`
 
@@ -16,40 +18,24 @@ own machine or company server. Gives you a URL that works on your
 Leave that black window open while people are using the dashboard. Next
 time, just double-click `start.bat` again.
 
-To change the password later, log in and use **"🔑 Change password"** in
-the left sidebar — no file editing needed.
+To change the password later, edit `.streamlit/credentials.json` in this
+folder and restart `start.bat`, or use the **Change password** panel in
+the app's sidebar once logged in.
 
 ---
 
 ## Manual steps (if you'd rather not use start.bat)
 
-**Step 1: Open the folder**
-File → Open Folder → select the `streamlit-dashboard` folder in VS Code.
+Requires Python 3.10+ installed (check with `python --version`).
 
-**Step 2: Open a terminal**
-Terminal → New Terminal.
-
-**Step 3: Install the requirements** (only needed once)
 ```
 pip install -r requirements.txt
 ```
 
-**Step 4: Set your admin username & password**
-Inside the `.streamlit` folder there's a file called `credentials.example.json`.
-1. Copy/rename it to `credentials.json` (remove `.example`)
-2. Open it and set your own username and password:
-```json
-{
-  "username": "admin",
-  "password": "your-own-strong-password"
-}
-```
-3. Save it.
+Copy `.streamlit/credentials.example.json` to `.streamlit/credentials.json`
+and set your own username/password inside it.
 
-⚠️ Keep this file private — never share it or upload it anywhere public.
-It holds your login password in plain text.
-
-**Step 5: Run the app**
+Run it:
 ```
 streamlit run app.py
 ```
@@ -60,71 +46,87 @@ You'll see:
   Network URL: http://192.168.1.42:8501
 ```
 
-**Step 6: Open it**
-Ctrl+Click the `Local URL` (or paste it into your browser). You'll see the
-login screen first — log in with the username/password you set in Step 4.
+- **Local URL** — only works on the machine running it
+- **Network URL** — works for anyone on the same office Wi-Fi/LAN. Share
+  this with your team. It will NOT work for anyone outside your office
+  network (no internet exposure at all).
 
 ---
 
-## Turn this into a permanent company URL
+## For a URL that's always available (not just while your laptop is on)
 
-### Option A — Run it on an always-on company PC or server
+Run this on a company server or an always-on PC instead of your personal
+laptop, so the Network URL stays reachable all the time.
 
-1. Copy the whole `streamlit-dashboard` folder onto a company server or a
-   PC that stays on and connected to the network (not your personal laptop)
-2. On that machine, double-click `start.bat` (or follow the manual steps above)
-3. Share that machine's **Network URL** with your team — this stays live
-   as long as that machine is on
+### Auto-start on Windows
 
-### Option B — Make it auto-start on Windows
+1. Press `Win + R`, type `shell:startup`, press Enter
+2. Put a shortcut to `start.bat` (from this folder) inside that Startup folder
+3. The dashboard now starts automatically whenever that machine turns on
 
-On the server/PC from Option A:
+### Give it a friendly name instead of an IP address (optional)
 
-1. Press `Win + R`, type `shell:startup`, press Enter — opens the Windows
-   Startup folder
-2. Create a shortcut to `start.bat` (from this folder) inside that Startup folder
-3. Now the dashboard starts automatically every time that machine turns on
-   or a user logs in
-
-### Option C — Give it a friendly name instead of an IP address (optional)
-
-IP addresses like `192.168.1.42` can change over time. Ask your IT team to:
-- Assign that server a **static/reserved IP** in your router/DHCP settings, or
-- Add an internal DNS entry so people can type something like
-  `http://fleet-dashboard.yourcompany.local:8501` instead of an IP
+Ask your IT team to assign the server a static/reserved IP, or add an
+internal DNS entry so people can type something like
+`http://fleet-dashboard.yourcompany.local:8501` instead of an IP.
 
 ---
 
-## Sidebar: password, branding
+## Deploying to Streamlit Community Cloud (internet-reachable, login-protected)
 
-After logging in, the left sidebar has two expandable sections:
+1. Push this folder's contents to a GitHub repo (private is fine)
+2. Go to **share.streamlit.io**, sign in with GitHub, click **New app**
+3. Pick the repo/branch, set **Main file path** to `app.py`
+4. Under **Advanced settings → Secrets**, add:
+   ```
+   ADMIN_USERNAME = "your-username"
+   ADMIN_PASSWORD = "your-strong-password"
+   ```
+   (this stays encrypted on Streamlit's servers, never goes into the repo)
+5. Click **Deploy**
 
-- **🔑 Change password** — enter your current password once, then your new
-  password twice. Takes effect immediately, no restart needed.
-- **🏢 Company branding** — set your company name and upload a logo image
-  (PNG/JPG). Both are saved to disk and show at the top of the sidebar for
-  everyone who logs in afterward.
+The app automatically prefers these Cloud secrets over the local
+`credentials.json` file when both are present, so the same codebase works
+both locally and on Cloud without changes.
+
+**Important:** do not commit your real `.streamlit/credentials.json` to
+GitHub — only commit `.streamlit/credentials.example.json`.
+
+---
+
+## What it shows
+
+- KPI cards: Total GPS km, Total MIS km, Overall Diff %, Vehicles, Flagged
+- Day-wise GPS vs MIS trend chart
+- Site-wise GPS vs MIS volume chart (single chart, scrollable box) and a
+  mismatch % chart, colored by severity
+- Corrective-action cards (click one to filter the vehicle table below)
+- Searchable/filterable vehicle table with color-coded Diff % and Action
+- Vehicle drill-down with a daily GPS vs MIS chart
+- Adjustable mismatch threshold slider
 
 ## Month-over-month comparison
 
 Uploading a new file does **not** delete previous months — nothing is ever
 deleted unless you delete it yourself.
 
-- After uploading a file, confirm/edit the **month label** (guessed from the
-  filename) — it's saved to history automatically, no button to click.
-- The **Total GPS km** and **Total MIS km** cards then show a delta versus
-  the most recently-saved earlier month.
+- After uploading a file, confirm/edit the **month label** (guessed from
+  the filename) — it's saved to history automatically, no button to click.
+- The **Total GPS km** and **Total MIS km** cards show a delta versus the
+  most recently-saved earlier month.
 - Use the **"Viewing"** dropdown at the top to switch between the file you
-  just uploaded and any previously saved month.
-- Scroll to the **Monthly history** section at the bottom for a trend chart
-  and table across every saved month, with an option to remove a month.
-- History is stored in `history.json` in this folder — persists across restarts.
+  just uploaded and any previously saved month — this is your month filter.
+- Scroll to the **Monthly history** section at the bottom for a trend
+  chart and table across every month you've saved, and an option to
+  remove a month if you saved one by mistake.
+- History (including day-wise data for uploaded months) is stored in
+  `history.json` in this folder — it persists across restarts.
 
 ## Notes
 
-- Only one admin account is supported (as requested) — anyone with the
-  username/password can log in from anywhere on the company network.
-- All files (`credentials.json`, `branding.json`, `logo.png`, `history.json`)
-  live in this folder / its `.streamlit` subfolder and persist across restarts.
+- Only one admin account is supported (single username/password).
 - The Excel file you upload is processed entirely on the machine running
-  the app — nothing is sent externally.
+  the app — nothing is sent externally (except when using Streamlit Cloud,
+  where it's processed on Streamlit's servers, not sent anywhere else).
+- Company name and logo are set directly in `app.py` (search for
+  `COMPANY_NAME` and `LOGO_PATH`) — edit and restart to change them.
