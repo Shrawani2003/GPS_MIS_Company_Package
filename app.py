@@ -31,20 +31,20 @@ from openpyxl import load_workbook
 st.set_page_config(page_title="GPS vs MIS Fleet Dashboard", layout="wide", page_icon="🚚", initial_sidebar_state="expanded")
 
 # ---------------------------------------------------------------------------
-# Theme (light, clean SaaS-dashboard style — white cards, colored top borders)
+# Theme (dark, telemetry-style — black background, colored accents)
 # ---------------------------------------------------------------------------
-COLOR_BG = "#F4F6F9"
-COLOR_PANEL = "#FFFFFF"
-COLOR_BORDER = "#E5E8EC"
-COLOR_TEXT = "#1F2733"
-COLOR_MUTED = "#4B5768"
-COLOR_GPS = "#0EA5E9"
-COLOR_MIS = "#F59E0B"
-COLOR_OK = "#10B981"
-COLOR_CRIT = "#EF4444"
-COLOR_WARN = "#F59E0B"
-COLOR_DIFF = "#8B5CF6"
-COLOR_VEHICLES = "#3B82F6"
+COLOR_BG = "#0B0F14"
+COLOR_PANEL = "#121822"
+COLOR_BORDER = "#232C38"
+COLOR_TEXT = "#E7ECF2"
+COLOR_MUTED = "#9AA7B5"
+COLOR_GPS = "#4FD1E8"
+COLOR_MIS = "#F5A623"
+COLOR_OK = "#3DDC84"
+COLOR_CRIT = "#FF5D5D"
+COLOR_WARN = "#F5A623"
+COLOR_DIFF = "#C084FC"
+COLOR_VEHICLES = "#60A5FA"
 CHART_BG = "#0B0F14"
 CHART_TEXT = "#F5F7FA"
 CHART_GRID = "#2A3441"
@@ -73,9 +73,9 @@ p, label, span, div {{ font-size: 13px; font-weight: 500; }}
 .kpi-card {{
     background: {COLOR_PANEL}; border: 1px solid {COLOR_BORDER}; border-radius: 12px;
     padding: 18px 18px 16px; position: relative; overflow: hidden;
-    box-shadow: 0 1px 3px rgba(16,24,40,0.06); transition: transform 0.15s ease, box-shadow 0.15s ease;
+    box-shadow: 0 0 12px rgba(0,0,0,0.3); transition: transform 0.15s ease, box-shadow 0.15s ease;
 }}
-.kpi-card:hover {{ transform: translateY(-2px); box-shadow: 0 6px 16px rgba(16,24,40,0.10); }}
+.kpi-card:hover {{ transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.45); }}
 .kpi-topbar {{ position: absolute; top: 0; left: 0; right: 0; height: 4px; }}
 .kpi-icon {{
     width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center;
@@ -92,7 +92,7 @@ p, label, span, div {{ font-size: 13px; font-weight: 500; }}
 
 /* Native bordered containers (used to box charts) — match KPI card styling */
 [data-testid="stVerticalBlockBorderWrapper"] {{
-    border-radius: 12px !important; box-shadow: 0 1px 3px rgba(16,24,40,0.06);
+    border-radius: 12px !important; box-shadow: 0 0 12px rgba(0,0,0,0.3);
 }}
 [data-testid="stVerticalBlockBorderWrapper"] > div {{ border-color: {COLOR_BORDER} !important; }}
 
@@ -124,7 +124,7 @@ p, label, span, div {{ font-size: 13px; font-weight: 500; }}
     background: {COLOR_GPS} !important; color: #FFFFFF !important; border: none !important;
     border-radius: 7px !important; font-weight: 600 !important; font-size: 12px !important;
     padding: 0.35rem 0.8rem !important; transition: transform 0.1s ease, opacity 0.1s ease;
-    box-shadow: 0 1px 3px rgba(14,165,233,0.3);
+    box-shadow: 0 1px 3px rgba(79,209,232,0.3);
 }}
 .stButton button:hover, .stFormSubmitButton button:hover {{ opacity: 0.88; transform: translateY(-1px); }}
 
@@ -132,7 +132,7 @@ p, label, span, div {{ font-size: 13px; font-weight: 500; }}
 .st-key-corrective_actions button {{
     white-space: pre-line !important; line-height: 1.3 !important; min-height: 54px !important;
     font-family: 'IBM Plex Mono', monospace !important; font-size: 11px !important; font-weight: 700 !important;
-    box-shadow: 0 2px 8px rgba(16,24,40,0.12);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.4);
 }}
 
 /* Corrective-action buttons colored by severity */
@@ -248,7 +248,7 @@ def check_login():
         return True
 
     st.markdown(
-        "<div style='color:#0EA5E9; font-family:\"IBM Plex Mono\",monospace; font-size:12px; letter-spacing:2px;'>FLEET TELEMETRY RECONCILIATION</div>"
+        "<div style='color:#4FD1E8; font-family:\"IBM Plex Mono\",monospace; font-size:12px; letter-spacing:2px;'>FLEET TELEMETRY RECONCILIATION</div>"
         "<h1 style='margin-top:2px;'>GPS vs MIS Dashboard</h1>",
         unsafe_allow_html=True,
     )
