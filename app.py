@@ -53,19 +53,19 @@ st.markdown(f"""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
 
-html, body, [class*="css"] {{ font-family: 'Inter', sans-serif; font-size: 13px; }}
+html, body, [class*="css"] {{ font-family: 'Inter', sans-serif; font-size: 15px; }}
 .stApp {{ background-color: {COLOR_BG}; color: {COLOR_TEXT}; }}
 #MainMenu {{ visibility: hidden; }}
 footer {{ visibility: hidden; }}
 
-h1 {{ font-family: 'Space Grotesk', sans-serif !important; font-weight: 700 !important; color: {COLOR_TEXT} !important; font-size: 26px !important; }}
-h2, h3 {{ font-family: 'Space Grotesk', sans-serif !important; font-weight: 700 !important; color: {COLOR_TEXT} !important; font-size: 18px !important; }}
-h4 {{ font-family: 'Space Grotesk', sans-serif !important; font-weight: 700 !important; color: {COLOR_TEXT} !important; font-size: 14px !important; }}
-p, label, span, div {{ font-size: 13px; font-weight: 500; }}
+h1 {{ font-family: 'Space Grotesk', sans-serif !important; font-weight: 700 !important; color: {COLOR_TEXT} !important; font-size: 30px !important; }}
+h2, h3 {{ font-family: 'Space Grotesk', sans-serif !important; font-weight: 700 !important; color: {COLOR_TEXT} !important; font-size: 21px !important; }}
+h4 {{ font-family: 'Space Grotesk', sans-serif !important; font-weight: 700 !important; color: {COLOR_TEXT} !important; font-size: 17px !important; }}
+p, label, span, div {{ font-size: 15px; font-weight: 500; }}
 
 /* Widget labels (Viewing, Flag threshold, Search, etc.) — bold and dark */
 [data-testid="stWidgetLabel"] p, [data-testid="stWidgetLabel"] label {{
-    font-weight: 700 !important; color: {COLOR_TEXT} !important; font-size: 13px !important;
+    font-weight: 700 !important; color: {COLOR_TEXT} !important; font-size: 15px !important;
 }}
 [data-testid="stMarkdownContainer"] p {{ font-weight: 500; color: {COLOR_TEXT}; }}
 
@@ -81,9 +81,9 @@ p, label, span, div {{ font-size: 13px; font-weight: 500; }}
     width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center;
     justify-content: center; font-size: 18px; margin-bottom: 14px;
 }}
-.kpi-label {{ color: {COLOR_MUTED}; font-size: 11px; letter-spacing: 0.6px; text-transform: uppercase; font-weight: 700; margin-bottom: 4px; }}
-.kpi-value {{ color: {COLOR_TEXT}; font-family: 'IBM Plex Mono', monospace; font-size: 26px; font-weight: 700; margin-bottom: 8px; }}
-.kpi-delta {{ display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 20px; font-family: 'IBM Plex Mono', monospace; }}
+.kpi-label {{ color: {COLOR_MUTED}; font-size: 13px; letter-spacing: 0.6px; text-transform: uppercase; font-weight: 700; margin-bottom: 4px; }}
+.kpi-value {{ color: {COLOR_TEXT}; font-family: 'IBM Plex Mono', monospace; font-size: 30px; font-weight: 700; margin-bottom: 8px; }}
+.kpi-delta {{ display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 700; padding: 3px 9px; border-radius: 20px; font-family: 'IBM Plex Mono', monospace; }}
 
 .action-card {{
     background: {COLOR_PANEL}; border: 1px solid {COLOR_BORDER}; border-radius: 8px;
@@ -100,12 +100,12 @@ p, label, span, div {{ font-size: 13px; font-weight: 500; }}
 .stDataFrame, [data-testid="stDataFrame"] {{
     border: 1px solid {COLOR_BORDER} !important; border-radius: 10px !important; overflow: hidden;
 }}
-[data-testid="stDataFrame"] * {{ font-family: 'IBM Plex Mono', monospace !important; font-size: 11px !important; }}
+[data-testid="stDataFrame"] * {{ font-family: 'IBM Plex Mono', monospace !important; font-size: 13px !important; }}
 
 /* Inputs */
 .stTextInput input, .stSelectbox [data-baseweb="select"] > div, .stTextInput > div > div {{
     background: {COLOR_PANEL} !important; border: 1px solid {COLOR_BORDER} !important;
-    color: {COLOR_TEXT} !important; border-radius: 7px !important; font-size: 13px !important;
+    color: {COLOR_TEXT} !important; border-radius: 7px !important; font-size: 15px !important;
 }}
 .stSlider [data-baseweb="slider"] {{ padding-top: 6px; }}
 .stSlider [role="slider"] {{ background: {COLOR_MIS} !important; box-shadow: 0 0 0 4px rgba(245,158,11,0.18) !important; }}
@@ -122,7 +122,7 @@ p, label, span, div {{ font-size: 13px; font-weight: 500; }}
 /* Buttons — normal size by default */
 .stButton button, .stFormSubmitButton button {{
     background: {COLOR_GPS} !important; color: #FFFFFF !important; border: none !important;
-    border-radius: 7px !important; font-weight: 600 !important; font-size: 12px !important;
+    border-radius: 7px !important; font-weight: 600 !important; font-size: 14px !important;
     padding: 0.35rem 0.8rem !important; transition: transform 0.1s ease, opacity 0.1s ease;
     box-shadow: 0 1px 3px rgba(79,209,232,0.3);
 }}
@@ -131,7 +131,7 @@ p, label, span, div {{ font-size: 13px; font-weight: 500; }}
 /* Corrective-action buttons only — bigger, card-like, two-line label */
 .st-key-corrective_actions button {{
     white-space: pre-line !important; line-height: 1.3 !important; min-height: 54px !important;
-    font-family: 'IBM Plex Mono', monospace !important; font-size: 11px !important; font-weight: 700 !important;
+    font-family: 'IBM Plex Mono', monospace !important; font-size: 13px !important; font-weight: 700 !important;
     box-shadow: 0 2px 10px rgba(0,0,0,0.4);
 }}
 
@@ -154,10 +154,10 @@ p, label, span, div {{ font-size: 13px; font-weight: 500; }}
 [data-testid="stSidebar"] img {{ border-radius: 6px; }}
 
 /* Captions */
-.stCaption, [data-testid="stCaptionContainer"] {{ color: {COLOR_MUTED} !important; font-family: 'IBM Plex Mono', monospace !important; font-weight: 600 !important; font-size: 12px !important; }}
+.stCaption, [data-testid="stCaptionContainer"] {{ color: {COLOR_MUTED} !important; font-family: 'IBM Plex Mono', monospace !important; font-weight: 600 !important; font-size: 14px !important; }}
 
 /* Checkbox label */
-.stCheckbox label p {{ color: {COLOR_TEXT} !important; font-size: 13px !important; }}
+.stCheckbox label p {{ color: {COLOR_TEXT} !important; font-size: 15px !important; }}
 
 /* Alert boxes */
 [data-testid="stAlert"] {{ background: {COLOR_PANEL} !important; border: 1px solid {COLOR_BORDER} !important; border-radius: 8px; }}
