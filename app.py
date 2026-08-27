@@ -45,8 +45,9 @@ COLOR_CRIT = "#EF4444"
 COLOR_WARN = "#F59E0B"
 COLOR_DIFF = "#8B5CF6"
 COLOR_VEHICLES = "#3B82F6"
-CHART_BG = "#EEF2F6"
-CHART_TEXT = "#111827"
+CHART_BG = "#0B0F14"
+CHART_TEXT = "#F5F7FA"
+CHART_GRID = "#2A3441"
 
 st.markdown(f"""
 <style>
@@ -579,9 +580,9 @@ if has_daily:
     fig.update_layout(
         plot_bgcolor=CHART_BG, paper_bgcolor=CHART_BG, font_color=CHART_TEXT,
         height=300, margin=dict(l=10, r=10, t=10, b=10),
-        xaxis=dict(gridcolor=COLOR_BORDER, title="Day of month", tickfont=dict(size=11, color=CHART_TEXT), dtick=2),
-        yaxis=dict(gridcolor=COLOR_BORDER, title="Km", tickfont=dict(size=11, color=CHART_TEXT)),
-        legend=dict(orientation="h", y=1.12, font=dict(size=12)),
+        xaxis=dict(gridcolor=CHART_GRID, title="Day of month", tickfont=dict(size=13, color=CHART_TEXT), title_font=dict(size=13, color=CHART_TEXT), dtick=2),
+        yaxis=dict(gridcolor=CHART_GRID, title="Km", tickfont=dict(size=13, color=CHART_TEXT), title_font=dict(size=13, color=CHART_TEXT)),
+        legend=dict(orientation="h", y=1.12, font=dict(size=13, color=CHART_TEXT)),
         hovermode="x unified",
     )
     with st.container(border=True):
@@ -617,21 +618,21 @@ def make_site_volume_chart(data, chart_height):
     fig.add_trace(go.Bar(
         y=data["Site"], x=data["Total_GPS"], name="GPS", orientation="h",
         marker_color=COLOR_GPS, text=data["Total_GPS"].apply(lambda v: f"{v:,.0f}"),
-        textposition="outside", textfont=dict(size=10, color=COLOR_TEXT, family="IBM Plex Mono"),
+        textposition="outside", textfont=dict(size=12, color=CHART_TEXT, family="IBM Plex Mono"),
         hovertemplate="%{y}<br>GPS: %{x:,.0f} km<extra></extra>",
     ))
     fig.add_trace(go.Bar(
         y=data["Site"], x=data["Total_MIS"], name="MIS", orientation="h",
         marker_color=COLOR_MIS, text=data["Total_MIS"].apply(lambda v: f"{v:,.0f}"),
-        textposition="outside", textfont=dict(size=10, color=COLOR_TEXT, family="IBM Plex Mono"),
+        textposition="outside", textfont=dict(size=12, color=CHART_TEXT, family="IBM Plex Mono"),
         hovertemplate="%{y}<br>MIS: %{x:,.0f} km<extra></extra>",
     ))
     fig.update_layout(
         barmode="group", plot_bgcolor=CHART_BG, paper_bgcolor=CHART_BG, font_color=CHART_TEXT,
         height=chart_height, margin=dict(l=10, r=50, t=10, b=30),
-        xaxis=dict(gridcolor=COLOR_BORDER, title="Km", tickfont=dict(size=10, color=CHART_TEXT)),
-        yaxis=dict(tickfont=dict(size=11, family="Inter", color=CHART_TEXT), automargin=True),
-        legend=dict(orientation="h", y=1.05, x=0, font=dict(size=11)),
+        xaxis=dict(gridcolor=CHART_GRID, title="Km", tickfont=dict(size=12, color=CHART_TEXT), title_font=dict(size=13, color=CHART_TEXT)),
+        yaxis=dict(tickfont=dict(size=13, family="Inter", color=CHART_TEXT), automargin=True),
+        legend=dict(orientation="h", y=1.05, x=0, font=dict(size=12, color=CHART_TEXT)),
         bargap=0.28, bargroupgap=0.08,
     )
     return fig
@@ -653,7 +654,7 @@ fig_sites_diff.add_trace(go.Bar(
 fig_sites_diff.update_layout(
     plot_bgcolor=CHART_BG, paper_bgcolor=CHART_BG, font_color=CHART_TEXT,
     height=220, margin=dict(l=10, r=10, t=10, b=10),
-    xaxis=dict(gridcolor=COLOR_BORDER, tickangle=-35, tickfont=dict(color=CHART_TEXT, size=11)), yaxis=dict(gridcolor=COLOR_BORDER, title="Diff %", tickfont=dict(color=CHART_TEXT)),
+    xaxis=dict(gridcolor=CHART_GRID, tickangle=-35, tickfont=dict(color=CHART_TEXT, size=13)), yaxis=dict(gridcolor=CHART_GRID, title="Diff %", tickfont=dict(color=CHART_TEXT, size=13), title_font=dict(size=13, color=CHART_TEXT)),
     showlegend=False,
 )
 with st.container(border=True):
@@ -805,9 +806,9 @@ if veh_pick:
         fig2.update_layout(
             plot_bgcolor=CHART_BG, paper_bgcolor=CHART_BG, font_color=CHART_TEXT,
             height=260, margin=dict(l=10, r=10, t=10, b=10),
-            xaxis=dict(gridcolor=COLOR_BORDER, title="Day of month", tickfont=dict(size=11, color=CHART_TEXT), dtick=2),
-            yaxis=dict(gridcolor=COLOR_BORDER, title="Km", tickfont=dict(size=11, color=CHART_TEXT)),
-            legend=dict(orientation="h", y=1.12, font=dict(size=12)),
+            xaxis=dict(gridcolor=CHART_GRID, title="Day of month", tickfont=dict(size=13, color=CHART_TEXT), title_font=dict(size=13, color=CHART_TEXT), dtick=2),
+            yaxis=dict(gridcolor=CHART_GRID, title="Km", tickfont=dict(size=13, color=CHART_TEXT), title_font=dict(size=13, color=CHART_TEXT)),
+            legend=dict(orientation="h", y=1.12, font=dict(size=13, color=CHART_TEXT)),
             hovermode="x unified",
         )
         with st.container(border=True):
@@ -839,8 +840,8 @@ if hist:
     fig3.update_layout(
         plot_bgcolor=CHART_BG, paper_bgcolor=CHART_BG, font_color=CHART_TEXT,
         height=260, margin=dict(l=10, r=10, t=10, b=10),
-        xaxis=dict(gridcolor=COLOR_BORDER), yaxis=dict(gridcolor=COLOR_BORDER),
-        legend=dict(orientation="h", y=1.15),
+        xaxis=dict(gridcolor=CHART_GRID, tickfont=dict(size=13, color=CHART_TEXT)), yaxis=dict(gridcolor=CHART_GRID, tickfont=dict(size=13, color=CHART_TEXT)),
+        legend=dict(orientation="h", y=1.15, font=dict(size=13, color=CHART_TEXT)),
     )
     with st.container(border=True):
         st.plotly_chart(fig3, use_container_width=True, key="chart_monthly_history")
