@@ -45,6 +45,8 @@ COLOR_CRIT = "#EF4444"
 COLOR_WARN = "#F59E0B"
 COLOR_DIFF = "#8B5CF6"
 COLOR_VEHICLES = "#3B82F6"
+CHART_BG = "#EEF2F6"
+CHART_TEXT = "#111827"
 
 st.markdown(f"""
 <style>
@@ -575,10 +577,10 @@ if has_daily:
         hovertemplate="Day %{x}<br>MIS: %{y:,.0f} km<extra></extra>",
     ))
     fig.update_layout(
-        plot_bgcolor=COLOR_PANEL, paper_bgcolor=COLOR_PANEL, font_color=COLOR_TEXT,
+        plot_bgcolor=CHART_BG, paper_bgcolor=CHART_BG, font_color=CHART_TEXT,
         height=300, margin=dict(l=10, r=10, t=10, b=10),
-        xaxis=dict(gridcolor=COLOR_BORDER, title="Day of month", tickfont=dict(size=11), dtick=2),
-        yaxis=dict(gridcolor=COLOR_BORDER, title="Km", tickfont=dict(size=11)),
+        xaxis=dict(gridcolor=COLOR_BORDER, title="Day of month", tickfont=dict(size=11, color=CHART_TEXT), dtick=2),
+        yaxis=dict(gridcolor=COLOR_BORDER, title="Km", tickfont=dict(size=11, color=CHART_TEXT)),
         legend=dict(orientation="h", y=1.12, font=dict(size=12)),
         hovermode="x unified",
     )
@@ -625,10 +627,10 @@ def make_site_volume_chart(data, chart_height):
         hovertemplate="%{y}<br>MIS: %{x:,.0f} km<extra></extra>",
     ))
     fig.update_layout(
-        barmode="group", plot_bgcolor=COLOR_PANEL, paper_bgcolor=COLOR_PANEL, font_color=COLOR_TEXT,
+        barmode="group", plot_bgcolor=CHART_BG, paper_bgcolor=CHART_BG, font_color=CHART_TEXT,
         height=chart_height, margin=dict(l=10, r=50, t=10, b=30),
-        xaxis=dict(gridcolor=COLOR_BORDER, title="Km", tickfont=dict(size=10)),
-        yaxis=dict(tickfont=dict(size=11, family="Inter"), automargin=True),
+        xaxis=dict(gridcolor=COLOR_BORDER, title="Km", tickfont=dict(size=10, color=CHART_TEXT)),
+        yaxis=dict(tickfont=dict(size=11, family="Inter", color=CHART_TEXT), automargin=True),
         legend=dict(orientation="h", y=1.05, x=0, font=dict(size=11)),
         bargap=0.28, bargroupgap=0.08,
     )
@@ -649,9 +651,9 @@ fig_sites_diff.add_trace(go.Bar(
     marker_color=site_bar_colors, name="Diff %",
 ))
 fig_sites_diff.update_layout(
-    plot_bgcolor=COLOR_PANEL, paper_bgcolor=COLOR_PANEL, font_color=COLOR_TEXT,
+    plot_bgcolor=CHART_BG, paper_bgcolor=CHART_BG, font_color=CHART_TEXT,
     height=220, margin=dict(l=10, r=10, t=10, b=10),
-    xaxis=dict(gridcolor=COLOR_BORDER, tickangle=-35), yaxis=dict(gridcolor=COLOR_BORDER, title="Diff %"),
+    xaxis=dict(gridcolor=COLOR_BORDER, tickangle=-35, tickfont=dict(color=CHART_TEXT, size=11)), yaxis=dict(gridcolor=COLOR_BORDER, title="Diff %", tickfont=dict(color=CHART_TEXT)),
     showlegend=False,
 )
 with st.container(border=True):
@@ -801,10 +803,10 @@ if veh_pick:
             hovertemplate="Day %{x}<br>MIS: %{y:,.1f} km<extra></extra>",
         ))
         fig2.update_layout(
-            plot_bgcolor=COLOR_PANEL, paper_bgcolor=COLOR_PANEL, font_color=COLOR_TEXT,
+            plot_bgcolor=CHART_BG, paper_bgcolor=CHART_BG, font_color=CHART_TEXT,
             height=260, margin=dict(l=10, r=10, t=10, b=10),
-            xaxis=dict(gridcolor=COLOR_BORDER, title="Day of month", tickfont=dict(size=11), dtick=2),
-            yaxis=dict(gridcolor=COLOR_BORDER, title="Km", tickfont=dict(size=11)),
+            xaxis=dict(gridcolor=COLOR_BORDER, title="Day of month", tickfont=dict(size=11, color=CHART_TEXT), dtick=2),
+            yaxis=dict(gridcolor=COLOR_BORDER, title="Km", tickfont=dict(size=11, color=CHART_TEXT)),
             legend=dict(orientation="h", y=1.12, font=dict(size=12)),
             hovermode="x unified",
         )
@@ -835,7 +837,7 @@ if hist:
     fig3.add_trace(go.Scatter(x=hist_df["Month"], y=hist_df["Total GPS"], name="GPS", line=dict(color=COLOR_GPS, width=2), mode="lines+markers"))
     fig3.add_trace(go.Scatter(x=hist_df["Month"], y=hist_df["Total MIS"], name="MIS", line=dict(color=COLOR_MIS, width=2), mode="lines+markers"))
     fig3.update_layout(
-        plot_bgcolor=COLOR_PANEL, paper_bgcolor=COLOR_PANEL, font_color=COLOR_TEXT,
+        plot_bgcolor=CHART_BG, paper_bgcolor=CHART_BG, font_color=CHART_TEXT,
         height=260, margin=dict(l=10, r=10, t=10, b=10),
         xaxis=dict(gridcolor=COLOR_BORDER), yaxis=dict(gridcolor=COLOR_BORDER),
         legend=dict(orientation="h", y=1.15),
