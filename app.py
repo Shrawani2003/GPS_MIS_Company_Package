@@ -581,7 +581,7 @@ if has_daily:
         plot_bgcolor=CHART_BG, paper_bgcolor=CHART_BG, font_color=CHART_TEXT,
         height=300, margin=dict(l=10, r=10, t=10, b=10),
         xaxis=dict(gridcolor=CHART_GRID, title="Day of month", tickfont=dict(size=13, color=CHART_TEXT), title_font=dict(size=13, color=CHART_TEXT), dtick=2),
-        yaxis=dict(gridcolor=CHART_GRID, title="Km", tickfont=dict(size=13, color=CHART_TEXT), title_font=dict(size=13, color=CHART_TEXT)),
+        yaxis=dict(gridcolor=CHART_GRID, title="Km", tickfont=dict(size=13, color=CHART_TEXT), title_font=dict(size=13, color=CHART_TEXT), tickformat=",.0f", exponentformat="none", separatethousands=True),
         legend=dict(orientation="h", y=1.12, font=dict(size=13, color=CHART_TEXT)),
         hovermode="x unified",
     )
@@ -630,7 +630,7 @@ def make_site_volume_chart(data, chart_height):
     fig.update_layout(
         barmode="group", plot_bgcolor=CHART_BG, paper_bgcolor=CHART_BG, font_color=CHART_TEXT,
         height=chart_height, margin=dict(l=10, r=50, t=10, b=30),
-        xaxis=dict(gridcolor=CHART_GRID, title="Km", tickfont=dict(size=12, color=CHART_TEXT), title_font=dict(size=13, color=CHART_TEXT)),
+        xaxis=dict(gridcolor=CHART_GRID, title="Km", tickfont=dict(size=12, color=CHART_TEXT), title_font=dict(size=13, color=CHART_TEXT), tickformat=",.0f", exponentformat="none", separatethousands=True),
         yaxis=dict(tickfont=dict(size=13, family="Inter", color=CHART_TEXT), automargin=True),
         legend=dict(orientation="h", y=1.05, x=0, font=dict(size=12, color=CHART_TEXT)),
         bargap=0.28, bargroupgap=0.08,
@@ -807,7 +807,7 @@ if veh_pick:
             plot_bgcolor=CHART_BG, paper_bgcolor=CHART_BG, font_color=CHART_TEXT,
             height=260, margin=dict(l=10, r=10, t=10, b=10),
             xaxis=dict(gridcolor=CHART_GRID, title="Day of month", tickfont=dict(size=13, color=CHART_TEXT), title_font=dict(size=13, color=CHART_TEXT), dtick=2),
-            yaxis=dict(gridcolor=CHART_GRID, title="Km", tickfont=dict(size=13, color=CHART_TEXT), title_font=dict(size=13, color=CHART_TEXT)),
+            yaxis=dict(gridcolor=CHART_GRID, title="Km", tickfont=dict(size=13, color=CHART_TEXT), title_font=dict(size=13, color=CHART_TEXT), tickformat=",.0f", exponentformat="none", separatethousands=True),
             legend=dict(orientation="h", y=1.12, font=dict(size=13, color=CHART_TEXT)),
             hovermode="x unified",
         )
@@ -835,12 +835,13 @@ if hist:
     } for e in sorted_entries])
 
     fig3 = go.Figure()
-    fig3.add_trace(go.Scatter(x=hist_df["Month"], y=hist_df["Total GPS"], name="GPS", line=dict(color=COLOR_GPS, width=2), mode="lines+markers"))
-    fig3.add_trace(go.Scatter(x=hist_df["Month"], y=hist_df["Total MIS"], name="MIS", line=dict(color=COLOR_MIS, width=2), mode="lines+markers"))
+    fig3.add_trace(go.Scatter(x=hist_df["Month"], y=hist_df["Total GPS"], name="GPS", line=dict(color=COLOR_GPS, width=2), mode="lines+markers", hovertemplate="%{x}<br>GPS: %{y:,.0f} km<extra></extra>"))
+    fig3.add_trace(go.Scatter(x=hist_df["Month"], y=hist_df["Total MIS"], name="MIS", line=dict(color=COLOR_MIS, width=2), mode="lines+markers", hovertemplate="%{x}<br>MIS: %{y:,.0f} km<extra></extra>"))
     fig3.update_layout(
         plot_bgcolor=CHART_BG, paper_bgcolor=CHART_BG, font_color=CHART_TEXT,
         height=260, margin=dict(l=10, r=10, t=10, b=10),
-        xaxis=dict(gridcolor=CHART_GRID, tickfont=dict(size=13, color=CHART_TEXT)), yaxis=dict(gridcolor=CHART_GRID, tickfont=dict(size=13, color=CHART_TEXT)),
+        xaxis=dict(gridcolor=CHART_GRID, tickfont=dict(size=13, color=CHART_TEXT)),
+        yaxis=dict(gridcolor=CHART_GRID, tickfont=dict(size=13, color=CHART_TEXT), title="Km", title_font=dict(size=13, color=CHART_TEXT), tickformat=",.0f", exponentformat="none", separatethousands=True),
         legend=dict(orientation="h", y=1.15, font=dict(size=13, color=CHART_TEXT)),
     )
     with st.container(border=True):
