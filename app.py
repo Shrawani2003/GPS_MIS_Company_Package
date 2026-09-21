@@ -31,23 +31,24 @@ from openpyxl import load_workbook
 st.set_page_config(page_title="GPS vs MIS Fleet Dashboard", layout="wide", page_icon="🚚", initial_sidebar_state="expanded")
 
 # ---------------------------------------------------------------------------
-# Theme (dark, neon-telemetry style — near-black background, vivid accents)
+# Theme (white, vibrant-accent style — clean light background, bold accents)
 # ---------------------------------------------------------------------------
-COLOR_BG = "#0A0E17"
-COLOR_PANEL = "#121a2c"
-COLOR_BORDER = "#283a5c"
-COLOR_TEXT = "#F1F5FB"
-COLOR_MUTED = "#93A5C4"
-COLOR_GPS = "#00E5FF"
-COLOR_MIS = "#FF9F1C"
-COLOR_OK = "#00E676"
-COLOR_CRIT = "#FF3B5C"
-COLOR_WARN = "#FFC93C"
-COLOR_DIFF = "#B14EFF"
-COLOR_VEHICLES = "#4C6FFF"
-COLOR_FLAGGED = "#FF3D9A"
-CHART_TEXT = "#F5F7FA"
-CHART_GRID = "#33456b"
+COLOR_BG = "#FFFFFF"
+COLOR_PANEL = "#F7F9FC"
+COLOR_BORDER = "#E2E8F0"
+COLOR_TEXT = "#0F172A"
+COLOR_MUTED = "#5B6B85"
+COLOR_GPS = "#0891B2"
+COLOR_MIS = "#EA580C"
+COLOR_OK = "#16A34A"
+COLOR_CRIT = "#DC2626"
+COLOR_WARN = "#B45309"
+COLOR_DIFF = "#7C3AED"
+COLOR_VEHICLES = "#4F46E5"
+COLOR_FLAGGED = "#DB2777"
+CHART_TEXT = "#0F172A"
+CHART_GRID = "#E2E8F0"
+CHART_BG = "#F7F9FC"
 
 
 def hex_to_rgba(hex_color, alpha):
@@ -56,23 +57,12 @@ def hex_to_rgba(hex_color, alpha):
     return f"rgba({r},{g},{b},{alpha})"
 
 
-# Chart panels get their own richer, slightly-lighter-than-page background so
-# plots read as distinct glowing cards rather than blending into the page.
-CHART_BG = "#161f38"
-
-PAGE_BG = (
-    f"radial-gradient(1100px circle at 6% -8%, {hex_to_rgba(COLOR_GPS, 0.10)}, transparent 42%),"
-    f"radial-gradient(1000px circle at 100% 8%, {hex_to_rgba(COLOR_DIFF, 0.10)}, transparent 40%),"
-    f"radial-gradient(900px circle at 50% 105%, {hex_to_rgba(COLOR_MIS, 0.07)}, transparent 40%),"
-    f"linear-gradient(170deg, #101a30 0%, #080c16 55%, {COLOR_BG} 100%)"
-)
-
 st.markdown(f"""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
 
 html, body, [class*="css"] {{ font-family: 'Inter', sans-serif; font-size: 15px; }}
-.stApp {{ background: {PAGE_BG} {COLOR_BG}; background-attachment: fixed; color: {COLOR_TEXT}; }}
+.stApp {{ background: {COLOR_BG}; color: {COLOR_TEXT}; }}
 #MainMenu {{ visibility: hidden; }}
 footer {{ visibility: hidden; }}
 
@@ -89,32 +79,28 @@ p, label, span, div {{ font-size: 15px; font-weight: 500; }}
 
 /* Custom KPI cards */
 .kpi-card {{
-    background: linear-gradient(160deg, {COLOR_PANEL}, {COLOR_BG} 130%);
-    border: 1px solid color-mix(in srgb, var(--accent) 35%, {COLOR_BORDER}); border-radius: 12px;
+    background: {COLOR_BG};
+    border: 1px solid color-mix(in srgb, var(--accent) 28%, {COLOR_BORDER}); border-radius: 12px;
     padding: 18px 18px 16px; position: relative; overflow: hidden;
-    box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 12%, transparent),
-                0 10px 26px color-mix(in srgb, var(--accent) 20%, transparent),
-                0 0 18px rgba(0,0,0,0.35);
+    box-shadow: 0 1px 2px rgba(15,23,42,0.04),
+                0 10px 22px color-mix(in srgb, var(--accent) 10%, transparent);
     transition: transform 0.15s ease, box-shadow 0.15s ease;
     display: flex; flex-direction: column; justify-content: flex-start;
     height: 212px; box-sizing: border-box;
 }}
 .kpi-card:hover {{
     transform: translateY(-3px);
-    box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent),
-                0 14px 32px color-mix(in srgb, var(--accent) 38%, transparent),
-                0 0 22px rgba(0,0,0,0.5);
+    box-shadow: 0 4px 10px rgba(15,23,42,0.06),
+                0 16px 30px color-mix(in srgb, var(--accent) 20%, transparent);
 }}
 .kpi-topbar {{
     position: absolute; top: 0; left: 0; right: 0; height: 4px;
-    background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 45%, white));
-    box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 70%, transparent);
+    background: var(--accent);
 }}
 .kpi-icon {{
     width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center;
     justify-content: center; font-size: 18px; margin-bottom: 14px; color: var(--accent);
-    background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 38%, transparent), color-mix(in srgb, var(--accent) 12%, transparent));
-    box-shadow: 0 0 16px color-mix(in srgb, var(--accent) 55%, transparent);
+    background: color-mix(in srgb, var(--accent) 14%, white);
 }}
 .kpi-label {{ color: {COLOR_MUTED}; font-size: 13px; letter-spacing: 0.6px; text-transform: uppercase; font-weight: 700; margin-bottom: 4px; }}
 .kpi-value {{ color: {COLOR_TEXT}; font-family: 'IBM Plex Mono', monospace; font-size: 22px; font-weight: 700; margin-bottom: 8px; white-space: nowrap; }}
@@ -125,16 +111,14 @@ p, label, span, div {{ font-size: 15px; font-weight: 500; }}
     padding: 10px 14px; margin-bottom: 6px;
 }}
 
-/* Native bordered containers (used to box charts) — glowing panel cards */
+/* Native bordered containers (used to box charts) */
 [data-testid="stVerticalBlockBorderWrapper"] {{
     border-radius: 14px !important;
-    box-shadow: 0 0 0 1px {hex_to_rgba(COLOR_GPS, 0.10)},
-                0 12px 30px rgba(0,0,0,0.45),
-                0 0 26px {hex_to_rgba(COLOR_DIFF, 0.12)};
+    box-shadow: 0 1px 2px rgba(15,23,42,0.04), 0 8px 20px rgba(15,23,42,0.06);
 }}
 [data-testid="stVerticalBlockBorderWrapper"] > div {{
     border-color: {COLOR_BORDER} !important;
-    background: linear-gradient(165deg, {CHART_BG}, {COLOR_PANEL} 140%) !important;
+    background: {CHART_BG} !important;
     border-radius: 14px !important;
 }}
 
@@ -150,51 +134,51 @@ p, label, span, div {{ font-size: 15px; font-weight: 500; }}
     color: {COLOR_TEXT} !important; border-radius: 7px !important; font-size: 15px !important;
 }}
 .stSlider [data-baseweb="slider"] {{ padding-top: 6px; }}
-.stSlider [role="slider"] {{ background: {COLOR_MIS} !important; box-shadow: 0 0 0 5px {hex_to_rgba(COLOR_MIS, 0.25)}, 0 0 10px {hex_to_rgba(COLOR_MIS, 0.5)} !important; }}
+.stSlider [role="slider"] {{ background: {COLOR_MIS} !important; box-shadow: 0 0 0 5px {hex_to_rgba(COLOR_MIS, 0.18)} !important; }}
 .stSlider div[data-baseweb="slider"] > div > div {{ background: linear-gradient(90deg, {COLOR_GPS}, {COLOR_DIFF}, {COLOR_MIS}) !important; }}
 
 /* File uploader */
 [data-testid="stFileUploaderDropzone"] {{
-    background: linear-gradient(135deg, {hex_to_rgba(COLOR_GPS, 0.07)}, {COLOR_PANEL} 70%) !important;
+    background: linear-gradient(135deg, {hex_to_rgba(COLOR_GPS, 0.05)}, {COLOR_PANEL} 70%) !important;
     border: 1.5px dashed {COLOR_BORDER} !important; border-radius: 12px !important;
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }}
-[data-testid="stFileUploaderDropzone"]:hover {{ border-color: {COLOR_GPS} !important; box-shadow: 0 0 16px {hex_to_rgba(COLOR_GPS, 0.25)} !important; }}
+[data-testid="stFileUploaderDropzone"]:hover {{ border-color: {COLOR_GPS} !important; box-shadow: 0 0 0 4px {hex_to_rgba(COLOR_GPS, 0.12)} !important; }}
 
 /* Buttons — normal size by default */
 .stButton button, .stFormSubmitButton button {{
     background: linear-gradient(135deg, {COLOR_VEHICLES}, {COLOR_GPS}) !important; color: #FFFFFF !important; border: none !important;
     border-radius: 7px !important; font-weight: 600 !important; font-size: 14px !important;
     padding: 0.35rem 0.8rem !important; transition: transform 0.1s ease, opacity 0.1s ease, box-shadow 0.15s ease;
-    box-shadow: 0 2px 10px {hex_to_rgba(COLOR_GPS, 0.35)};
+    box-shadow: 0 2px 8px {hex_to_rgba(COLOR_GPS, 0.28)};
 }}
 .stButton button:hover, .stFormSubmitButton button:hover {{
-    opacity: 0.92; transform: translateY(-1px); box-shadow: 0 4px 16px {hex_to_rgba(COLOR_GPS, 0.5)};
+    opacity: 0.92; transform: translateY(-1px); box-shadow: 0 4px 14px {hex_to_rgba(COLOR_GPS, 0.4)};
 }}
 
 /* Corrective-action buttons only — bigger, card-like, two-line label */
 .st-key-corrective_actions button {{
     white-space: pre-line !important; line-height: 1.3 !important; min-height: 54px !important;
     font-family: 'IBM Plex Mono', monospace !important; font-size: 13px !important; font-weight: 700 !important;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.4);
+    box-shadow: 0 2px 8px rgba(15,23,42,0.12);
 }}
 
 /* Corrective-action buttons colored by severity */
 [class*="st-key-actsev_critical"] button {{
-    background: linear-gradient(135deg, {COLOR_CRIT}, #C8163B) !important; color: #FFF !important;
-    box-shadow: 0 2px 14px {hex_to_rgba(COLOR_CRIT, 0.4)} !important;
+    background: linear-gradient(135deg, {COLOR_CRIT}, #9F1B1B) !important; color: #FFF !important;
+    box-shadow: 0 2px 10px {hex_to_rgba(COLOR_CRIT, 0.3)} !important;
 }}
 [class*="st-key-actsev_warn"] button {{
-    background: linear-gradient(135deg, {COLOR_WARN}, #E09A00) !important; color: #3A2400 !important;
-    box-shadow: 0 2px 14px {hex_to_rgba(COLOR_WARN, 0.4)} !important;
+    background: linear-gradient(135deg, {COLOR_WARN}, #7C3806) !important; color: #FFF !important;
+    box-shadow: 0 2px 10px {hex_to_rgba(COLOR_WARN, 0.3)} !important;
 }}
 [class*="st-key-actsev_watch"] button {{
-    background: linear-gradient(135deg, #FFDD7A, {COLOR_WARN}) !important; color: #3A2400 !important; opacity: 0.94;
-    box-shadow: 0 2px 14px {hex_to_rgba(COLOR_WARN, 0.3)} !important;
+    background: linear-gradient(135deg, #F59E0B, {COLOR_WARN}) !important; color: #FFF !important; opacity: 0.94;
+    box-shadow: 0 2px 10px {hex_to_rgba(COLOR_WARN, 0.25)} !important;
 }}
 [class*="st-key-actsev_ok"] button {{
-    background: linear-gradient(135deg, {COLOR_OK}, #00B85C) !important; color: #00280F !important;
-    box-shadow: 0 2px 14px {hex_to_rgba(COLOR_OK, 0.4)} !important;
+    background: linear-gradient(135deg, {COLOR_OK}, #0E7A38) !important; color: #FFF !important;
+    box-shadow: 0 2px 10px {hex_to_rgba(COLOR_OK, 0.3)} !important;
 }}
 
 /* Sidebar */
