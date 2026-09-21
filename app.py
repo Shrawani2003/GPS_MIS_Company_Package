@@ -74,6 +74,8 @@ p, label, span, div {{ font-size: 15px; font-weight: 500; }}
     background: {COLOR_PANEL}; border: 1px solid {COLOR_BORDER}; border-radius: 12px;
     padding: 18px 18px 16px; position: relative; overflow: hidden;
     box-shadow: 0 0 12px rgba(0,0,0,0.3); transition: transform 0.15s ease, box-shadow 0.15s ease;
+    display: flex; flex-direction: column; justify-content: flex-start;
+    height: 212px; box-sizing: border-box;
 }}
 .kpi-card:hover {{ transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.45); }}
 .kpi-topbar {{ position: absolute; top: 0; left: 0; right: 0; height: 4px; }}
