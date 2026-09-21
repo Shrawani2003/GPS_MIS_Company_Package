@@ -31,23 +31,30 @@ from openpyxl import load_workbook
 st.set_page_config(page_title="GPS vs MIS Fleet Dashboard", layout="wide", page_icon="🚚", initial_sidebar_state="expanded")
 
 # ---------------------------------------------------------------------------
-# Theme (dark, telemetry-style — black background, colored accents)
+# Theme (dark, neon-telemetry style — near-black background, vivid accents)
 # ---------------------------------------------------------------------------
-COLOR_BG = "#0B0F14"
-COLOR_PANEL = "#121822"
-COLOR_BORDER = "#232C38"
-COLOR_TEXT = "#E7ECF2"
-COLOR_MUTED = "#9AA7B5"
-COLOR_GPS = "#4FD1E8"
-COLOR_MIS = "#F5A623"
-COLOR_OK = "#3DDC84"
-COLOR_CRIT = "#FF5D5D"
-COLOR_WARN = "#F5A623"
-COLOR_DIFF = "#C084FC"
-COLOR_VEHICLES = "#60A5FA"
-CHART_BG = "#0B0F14"
+COLOR_BG = "#0A0E17"
+COLOR_PANEL = "#121a2c"
+COLOR_BORDER = "#283a5c"
+COLOR_TEXT = "#F1F5FB"
+COLOR_MUTED = "#93A5C4"
+COLOR_GPS = "#00E5FF"
+COLOR_MIS = "#FF9F1C"
+COLOR_OK = "#00E676"
+COLOR_CRIT = "#FF3B5C"
+COLOR_WARN = "#FFC93C"
+COLOR_DIFF = "#B14EFF"
+COLOR_VEHICLES = "#4C6FFF"
+COLOR_FLAGGED = "#FF3D9A"
+CHART_BG = "#0A0E17"
 CHART_TEXT = "#F5F7FA"
-CHART_GRID = "#2A3441"
+CHART_GRID = "#28354d"
+
+
+def hex_to_rgba(hex_color, alpha):
+    h = hex_color.lstrip("#")
+    r, g, b = int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
+    return f"rgba({r},{g},{b},{alpha})"
 
 st.markdown(f"""
 <style>
@@ -71,17 +78,32 @@ p, label, span, div {{ font-size: 15px; font-weight: 500; }}
 
 /* Custom KPI cards */
 .kpi-card {{
-    background: {COLOR_PANEL}; border: 1px solid {COLOR_BORDER}; border-radius: 12px;
+    background: linear-gradient(160deg, {COLOR_PANEL}, {COLOR_BG} 130%);
+    border: 1px solid color-mix(in srgb, var(--accent) 35%, {COLOR_BORDER}); border-radius: 12px;
     padding: 18px 18px 16px; position: relative; overflow: hidden;
-    box-shadow: 0 0 12px rgba(0,0,0,0.3); transition: transform 0.15s ease, box-shadow 0.15s ease;
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 12%, transparent),
+                0 10px 26px color-mix(in srgb, var(--accent) 20%, transparent),
+                0 0 18px rgba(0,0,0,0.35);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
     display: flex; flex-direction: column; justify-content: flex-start;
     height: 212px; box-sizing: border-box;
 }}
-.kpi-card:hover {{ transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.45); }}
-.kpi-topbar {{ position: absolute; top: 0; left: 0; right: 0; height: 4px; }}
+.kpi-card:hover {{
+    transform: translateY(-3px);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent),
+                0 14px 32px color-mix(in srgb, var(--accent) 38%, transparent),
+                0 0 22px rgba(0,0,0,0.5);
+}}
+.kpi-topbar {{
+    position: absolute; top: 0; left: 0; right: 0; height: 4px;
+    background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 45%, white));
+    box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 70%, transparent);
+}}
 .kpi-icon {{
     width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center;
-    justify-content: center; font-size: 18px; margin-bottom: 14px;
+    justify-content: center; font-size: 18px; margin-bottom: 14px; color: var(--accent);
+    background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 38%, transparent), color-mix(in srgb, var(--accent) 12%, transparent));
+    box-shadow: 0 0 16px color-mix(in srgb, var(--accent) 55%, transparent);
 }}
 .kpi-label {{ color: {COLOR_MUTED}; font-size: 13px; letter-spacing: 0.6px; text-transform: uppercase; font-weight: 700; margin-bottom: 4px; }}
 .kpi-value {{ color: {COLOR_TEXT}; font-family: 'IBM Plex Mono', monospace; font-size: 22px; font-weight: 700; margin-bottom: 8px; white-space: nowrap; }}
@@ -110,25 +132,27 @@ p, label, span, div {{ font-size: 15px; font-weight: 500; }}
     color: {COLOR_TEXT} !important; border-radius: 7px !important; font-size: 15px !important;
 }}
 .stSlider [data-baseweb="slider"] {{ padding-top: 6px; }}
-.stSlider [role="slider"] {{ background: {COLOR_MIS} !important; box-shadow: 0 0 0 4px rgba(245,158,11,0.18) !important; }}
-.stSlider div[data-baseweb="slider"] > div > div {{ background: linear-gradient(90deg, {COLOR_GPS}, {COLOR_MIS}) !important; }}
+.stSlider [role="slider"] {{ background: {COLOR_MIS} !important; box-shadow: 0 0 0 5px {hex_to_rgba(COLOR_MIS, 0.25)}, 0 0 10px {hex_to_rgba(COLOR_MIS, 0.5)} !important; }}
+.stSlider div[data-baseweb="slider"] > div > div {{ background: linear-gradient(90deg, {COLOR_GPS}, {COLOR_DIFF}, {COLOR_MIS}) !important; }}
 
 /* File uploader */
 [data-testid="stFileUploaderDropzone"] {{
-    background: linear-gradient(135deg, rgba(14,165,233,0.04), {COLOR_PANEL} 70%) !important;
+    background: linear-gradient(135deg, {hex_to_rgba(COLOR_GPS, 0.07)}, {COLOR_PANEL} 70%) !important;
     border: 1.5px dashed {COLOR_BORDER} !important; border-radius: 12px !important;
-    transition: border-color 0.15s ease;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }}
-[data-testid="stFileUploaderDropzone"]:hover {{ border-color: {COLOR_GPS} !important; }}
+[data-testid="stFileUploaderDropzone"]:hover {{ border-color: {COLOR_GPS} !important; box-shadow: 0 0 16px {hex_to_rgba(COLOR_GPS, 0.25)} !important; }}
 
 /* Buttons — normal size by default */
 .stButton button, .stFormSubmitButton button {{
-    background: {COLOR_GPS} !important; color: #FFFFFF !important; border: none !important;
+    background: linear-gradient(135deg, {COLOR_VEHICLES}, {COLOR_GPS}) !important; color: #FFFFFF !important; border: none !important;
     border-radius: 7px !important; font-weight: 600 !important; font-size: 14px !important;
-    padding: 0.35rem 0.8rem !important; transition: transform 0.1s ease, opacity 0.1s ease;
-    box-shadow: 0 1px 3px rgba(79,209,232,0.3);
+    padding: 0.35rem 0.8rem !important; transition: transform 0.1s ease, opacity 0.1s ease, box-shadow 0.15s ease;
+    box-shadow: 0 2px 10px {hex_to_rgba(COLOR_GPS, 0.35)};
 }}
-.stButton button:hover, .stFormSubmitButton button:hover {{ opacity: 0.88; transform: translateY(-1px); }}
+.stButton button:hover, .stFormSubmitButton button:hover {{
+    opacity: 0.92; transform: translateY(-1px); box-shadow: 0 4px 16px {hex_to_rgba(COLOR_GPS, 0.5)};
+}}
 
 /* Corrective-action buttons only — bigger, card-like, two-line label */
 .st-key-corrective_actions button {{
@@ -139,16 +163,20 @@ p, label, span, div {{ font-size: 15px; font-weight: 500; }}
 
 /* Corrective-action buttons colored by severity */
 [class*="st-key-actsev_critical"] button {{
-    background: linear-gradient(135deg, #F87171, #EF4444) !important; color: #FFF !important;
+    background: linear-gradient(135deg, {COLOR_CRIT}, #C8163B) !important; color: #FFF !important;
+    box-shadow: 0 2px 14px {hex_to_rgba(COLOR_CRIT, 0.4)} !important;
 }}
 [class*="st-key-actsev_warn"] button {{
-    background: linear-gradient(135deg, #FBBF24, #F59E0B) !important; color: #4A2E00 !important;
+    background: linear-gradient(135deg, {COLOR_WARN}, #E09A00) !important; color: #3A2400 !important;
+    box-shadow: 0 2px 14px {hex_to_rgba(COLOR_WARN, 0.4)} !important;
 }}
 [class*="st-key-actsev_watch"] button {{
-    background: linear-gradient(135deg, #FCD34D, #F59E0B) !important; color: #4A2E00 !important; opacity: 0.92;
+    background: linear-gradient(135deg, #FFDD7A, {COLOR_WARN}) !important; color: #3A2400 !important; opacity: 0.94;
+    box-shadow: 0 2px 14px {hex_to_rgba(COLOR_WARN, 0.3)} !important;
 }}
 [class*="st-key-actsev_ok"] button {{
-    background: linear-gradient(135deg, #34D399, #10B981) !important; color: #FFF !important;
+    background: linear-gradient(135deg, {COLOR_OK}, #00B85C) !important; color: #00280F !important;
+    box-shadow: 0 2px 14px {hex_to_rgba(COLOR_OK, 0.4)} !important;
 }}
 
 /* Sidebar */
@@ -166,23 +194,23 @@ p, label, span, div {{ font-size: 15px; font-weight: 500; }}
 </style>
 """, unsafe_allow_html=True)
 
-ACTION_COLORS = {"critical": COLOR_CRIT, "warn": COLOR_WARN, "watch": COLOR_MIS, "ok": COLOR_OK}
+ACTION_COLORS = {"critical": COLOR_CRIT, "warn": COLOR_WARN, "watch": COLOR_WARN, "ok": COLOR_OK}
 
 
 def kpi_card(container, icon, accent, label, value, delta_text=None, delta_positive=None, neutral=False):
     if delta_text and neutral:
         delta_html = f"<span class='kpi-delta' style='background:{COLOR_BORDER}; color:{COLOR_MUTED};'>{delta_text}</span>"
     elif delta_text:
-        d_bg = "rgba(16,185,129,0.12)" if delta_positive else "rgba(239,68,68,0.12)"
+        d_bg = hex_to_rgba(COLOR_OK, 0.16) if delta_positive else hex_to_rgba(COLOR_CRIT, 0.16)
         d_color = COLOR_OK if delta_positive else COLOR_CRIT
         arrow = "▲" if delta_positive else "▼"
         delta_html = f"<span class='kpi-delta' style='background:{d_bg}; color:{d_color};'>{arrow} {delta_text}</span>"
     else:
         delta_html = ""
     container.markdown(
-        f"<div class='kpi-card'>"
-        f"<div class='kpi-topbar' style='background:{accent};'></div>"
-        f"<div class='kpi-icon' style='background:{accent}22; color:{accent};'>{icon}</div>"
+        f"<div class='kpi-card' style='--accent:{accent};'>"
+        f"<div class='kpi-topbar'></div>"
+        f"<div class='kpi-icon'>{icon}</div>"
         f"<div class='kpi-label'>{label}</div>"
         f"<div class='kpi-value'>{value}</div>"
         f"{delta_html}"
@@ -250,8 +278,8 @@ def check_login():
         return True
 
     st.markdown(
-        "<div style='color:#4FD1E8; font-family:\"IBM Plex Mono\",monospace; font-size:12px; letter-spacing:2px;'>FLEET TELEMETRY RECONCILIATION</div>"
-        "<h1 style='margin-top:2px;'>GPS vs MIS Dashboard</h1>",
+        f"<div style='color:{COLOR_GPS}; font-family:\"IBM Plex Mono\",monospace; font-size:12px; letter-spacing:2px;'>FLEET TELEMETRY RECONCILIATION</div>"
+        f"<h1 style='margin-top:2px;'>GPS vs MIS Dashboard</h1>",
         unsafe_allow_html=True,
     )
     st.markdown("#### Admin login")
@@ -602,7 +630,7 @@ def page_overview():
              f"{overall_diff:+,.0f} km", overall_diff >= 0)
     kpi_card(c4, "🚚", COLOR_VEHICLES, "VEHICLES", f"{len(df)}",
              f"{df['Site'].nunique()} sites", neutral=True)
-    kpi_card(c5, "🚩", COLOR_CRIT, "FLAGGED", f"{flagged}",
+    kpi_card(c5, "🚩", COLOR_FLAGGED, "FLAGGED", f"{flagged}",
              f"{flagged/len(df)*100:.0f}% of fleet", neutral=True)
 
     if has_daily:
@@ -797,10 +825,10 @@ def page_vehicles():
     display_df = view[display_cols]
 
     ACTION_BG = {
-        "critical": "rgba(255,93,93,0.16)",
-        "warn": "rgba(245,166,35,0.16)",
-        "watch": "rgba(245,166,35,0.10)",
-        "ok": "rgba(61,220,132,0.14)",
+        "critical": hex_to_rgba(COLOR_CRIT, 0.18),
+        "warn": hex_to_rgba(COLOR_WARN, 0.18),
+        "watch": hex_to_rgba(COLOR_WARN, 0.10),
+        "ok": hex_to_rgba(COLOR_OK, 0.14),
     }
 
     def style_row(row):
