@@ -82,7 +82,7 @@ p, label, span, div {{ font-size: 15px; font-weight: 500; }}
     justify-content: center; font-size: 18px; margin-bottom: 14px;
 }}
 .kpi-label {{ color: {COLOR_MUTED}; font-size: 13px; letter-spacing: 0.6px; text-transform: uppercase; font-weight: 700; margin-bottom: 4px; }}
-.kpi-value {{ color: {COLOR_TEXT}; font-family: 'IBM Plex Mono', monospace; font-size: 30px; font-weight: 700; margin-bottom: 8px; }}
+.kpi-value {{ color: {COLOR_TEXT}; font-family: 'IBM Plex Mono', monospace; font-size: 22px; font-weight: 700; margin-bottom: 8px; white-space: nowrap; }}
 .kpi-delta {{ display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 700; padding: 3px 9px; border-radius: 20px; font-family: 'IBM Plex Mono', monospace; }}
 
 .action-card {{
