@@ -445,67 +445,79 @@ def get_previous_entry(hist, current_key):
 
 
 # ---------------------------------------------------------------------------
-# UI
+# Brand header (shown at the top of every page)
 # ---------------------------------------------------------------------------
-st.markdown(
-    f"<div style='color:{COLOR_GPS}; font-family:\"IBM Plex Mono\",monospace; font-size:12px; letter-spacing:2px;'>FLEET TELEMETRY RECONCILIATION</div>"
-    f"<h1 style='margin-top:2px; background:linear-gradient(90deg,{COLOR_GPS},{COLOR_MIS}) !important; "
-    f"-webkit-background-clip:text !important; -webkit-text-fill-color:transparent !important; background-clip:text !important; "
-    f"display:inline-block;'>GPS vs MIS Dashboard</h1>",
-    unsafe_allow_html=True,
-)
+def render_brand_header():
+    st.markdown(
+        f"<div style='color:{COLOR_GPS}; font-family:\"IBM Plex Mono\",monospace; font-size:12px; letter-spacing:2px;'>FLEET TELEMETRY RECONCILIATION</div>"
+        f"<h1 style='margin-top:2px; background:linear-gradient(90deg,{COLOR_GPS},{COLOR_MIS}) !important; "
+        f"-webkit-background-clip:text !important; -webkit-text-fill-color:transparent !important; background-clip:text !important; "
+        f"display:inline-block;'>GPS vs MIS Dashboard</h1>",
+        unsafe_allow_html=True,
+    )
 
-uploaded = st.file_uploader("Drop this month's file here (needs GPS and MIS sheets)", type=["xlsx", "xls"])
+
+# ---------------------------------------------------------------------------
+# Data source — upload / pick a saved month / set the flag threshold.
+# Lives in the sidebar so it's available on every page without re-uploading.
+# ---------------------------------------------------------------------------
+with st.sidebar:
+    st.markdown("---")
+    st.markdown("#### Data")
+    uploaded = st.file_uploader("Drop this month's file here (needs GPS and MIS sheets)", type=["xlsx", "xls"])
+
 hist = load_history()
 sorted_hist_entries = sorted(hist.values(), key=lambda x: x["key"], reverse=True)
 month_options = [e["label"] for e in sorted_hist_entries]
 
 if uploaded is None and not month_options:
-    st.info("Upload your monthly GPS + MIS workbook to see the analysis.")
+    render_brand_header()
+    st.info("Upload your monthly GPS + MIS workbook using the sidebar to see the analysis.")
     st.stop()
 
-view_options = (["📤 Uploaded file"] if uploaded is not None else []) + month_options
-view_choice = st.selectbox("Viewing", view_options, index=0)
+with st.sidebar:
+    view_options = (["📤 Uploaded file"] if uploaded is not None else []) + month_options
+    view_choice = st.selectbox("Viewing", view_options, index=0)
 
-has_daily = False
+    has_daily = False
 
-if view_choice == "📤 Uploaded file":
-    try:
-        df, daily_df, n_days = build_dataset(uploaded.getvalue())
-    except Exception as e:
-        st.error(str(e))
-        st.stop()
-    has_daily = True
-
-    guessed_key, guessed_label = guess_month_from_filename(uploaded.name)
-    month_label = st.text_input("Month label for this file (edit if the guess is wrong)", value=guessed_label)
-    try:
-        month_key = datetime.strptime(month_label.strip(), "%B %Y").strftime("%Y-%m")
-    except ValueError:
-        month_key = guessed_key
-else:
-    entry = hist[next(e["key"] for e in sorted_hist_entries if e["label"] == view_choice)]
-    df = pd.DataFrame(entry["vehicle_totals"])
-    df["Diff"] = df["Total MIS"] - df["Total GPS"]
-    df["Diff %"] = df.apply(lambda r: (r["Diff"] / r["Total GPS"]) if r["Total GPS"] else 0, axis=1)
-    df["Source"] = "Both"
-    month_key = entry["key"]
-
-    daily_compact = entry.get("daily")
-    if daily_compact:
+    if view_choice == "📤 Uploaded file":
+        try:
+            df, daily_df, n_days = build_dataset(uploaded.getvalue())
+        except Exception as e:
+            st.error(str(e))
+            st.stop()
         has_daily = True
-        daily_rows = []
-        for veh, series in daily_compact.items():
-            gvals, mvals = series["g"], series["m"]
-            for d in range(len(gvals)):
-                daily_rows.append({"Vehicle": veh, "Day": d + 1, "GPS": gvals[d], "MIS": mvals[d]})
-        daily_df = pd.DataFrame(daily_rows)
-        st.caption(f"Viewing saved history for **{view_choice}** — including day-wise breakdown.")
-    else:
-        daily_df = pd.DataFrame(columns=["Vehicle", "Day", "GPS", "MIS"])
-        st.caption(f"Viewing saved history for **{view_choice}** — this month was saved before day-wise data was stored, so only totals are available.")
 
-threshold = st.slider("Flag threshold (%)  — flag vehicles where |Diff %| exceeds this", 5, 100, 20, step=5)
+        guessed_key, guessed_label = guess_month_from_filename(uploaded.name)
+        month_label = st.text_input("Month label for this file (edit if the guess is wrong)", value=guessed_label)
+        try:
+            month_key = datetime.strptime(month_label.strip(), "%B %Y").strftime("%Y-%m")
+        except ValueError:
+            month_key = guessed_key
+    else:
+        entry = hist[next(e["key"] for e in sorted_hist_entries if e["label"] == view_choice)]
+        df = pd.DataFrame(entry["vehicle_totals"])
+        df["Diff"] = df["Total MIS"] - df["Total GPS"]
+        df["Diff %"] = df.apply(lambda r: (r["Diff"] / r["Total GPS"]) if r["Total GPS"] else 0, axis=1)
+        df["Source"] = "Both"
+        month_key = entry["key"]
+
+        daily_compact = entry.get("daily")
+        if daily_compact:
+            has_daily = True
+            daily_rows = []
+            for veh, series in daily_compact.items():
+                gvals, mvals = series["g"], series["m"]
+                for d in range(len(gvals)):
+                    daily_rows.append({"Vehicle": veh, "Day": d + 1, "GPS": gvals[d], "MIS": mvals[d]})
+            daily_df = pd.DataFrame(daily_rows)
+            st.caption(f"Viewing saved history for **{view_choice}** — including day-wise breakdown.")
+        else:
+            daily_df = pd.DataFrame(columns=["Vehicle", "Day", "GPS", "MIS"])
+            st.caption(f"Viewing saved history for **{view_choice}** — this month was saved before day-wise data was stored, so only totals are available.")
+
+    threshold = st.slider("Flag threshold (%)  — flag vehicles where |Diff %| exceeds this", 5, 100, 20, step=5)
 
 action_info = df.apply(lambda r: classify(r, threshold), axis=1)
 df["Action"] = action_info.apply(lambda x: x[0])
@@ -514,8 +526,6 @@ df["ActionDetail"] = action_info.apply(lambda x: x[2])
 
 total_gps = df["Total GPS"].sum()
 total_mis = df["Total MIS"].sum()
-overall_diff = total_mis - total_gps
-overall_pct = (overall_diff / total_gps) if total_gps else 0
 flagged = (df["Action"] != "No action needed").sum()
 
 if view_choice == "📤 Uploaded file":
@@ -537,294 +547,340 @@ if view_choice == "📤 Uploaded file":
         "daily": daily_compact,
     }
     save_history(hist)
-    st.caption(f"✓ Autosaved as **{month_label.strip()}** — {len(hist)} month(s) in history now.")
+    with st.sidebar:
+        st.caption(f"✓ Autosaved as **{month_label.strip()}** — {len(hist)} month(s) in history now.")
 
 prev_entry = get_previous_entry(hist, month_key)
-if prev_entry:
-    gps_delta = total_gps - prev_entry["total_gps"]
-    mis_delta = total_mis - prev_entry["total_mis"]
-    gps_delta_label = f"{gps_delta:+,.0f} km vs {prev_entry['label']}"
-    mis_delta_label = f"{mis_delta:+,.0f} km vs {prev_entry['label']}"
-else:
-    gps_delta_label = mis_delta_label = None
-    st.caption("No previous month saved yet to compare against — once you save another month, comparisons will show here automatically.")
 
-c1, c2, c3, c4, c5 = st.columns(5)
-gps_positive = prev_entry is not None and (total_gps - prev_entry["total_gps"]) >= 0
-mis_positive = prev_entry is not None and (total_mis - prev_entry["total_mis"]) >= 0
-kpi_card(c1, "📡", COLOR_GPS, "TOTAL GPS KM", f"{total_gps:,.0f}",
-         gps_delta_label.replace(" km", "") if gps_delta_label else None, gps_positive)
-kpi_card(c2, "📝", COLOR_MIS, "TOTAL MIS KM", f"{total_mis:,.0f}",
-         mis_delta_label.replace(" km", "") if mis_delta_label else None, mis_positive)
-kpi_card(c3, "⚠️", COLOR_DIFF, "OVERALL DIFF", f"{overall_pct*100:.1f}%",
-         f"{overall_diff:+,.0f} km", overall_diff >= 0)
-kpi_card(c4, "🚚", COLOR_VEHICLES, "VEHICLES", f"{len(df)}",
-         f"{df['Site'].nunique()} sites", neutral=True)
-kpi_card(c5, "🚩", COLOR_CRIT, "FLAGGED", f"{flagged}",
-         f"{flagged/len(df)*100:.0f}% of fleet", neutral=True)
+with st.sidebar:
+    st.caption(f"Generated {datetime.now().strftime('%d %b %Y, %H:%M')} — runs entirely on your machine, nothing uploaded externally.")
 
-if has_daily:
-    st.markdown("### Day-wise total km, all vehicles")
-    trend = daily_df.groupby("Day", as_index=False)[["GPS", "MIS"]].sum()
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(
-        x=trend["Day"], y=trend["GPS"], name="GPS", mode="lines+markers",
-        line=dict(color=COLOR_GPS, width=2.5), marker=dict(size=5),
-        hovertemplate="Day %{x}<br>GPS: %{y:,.0f} km<extra></extra>",
-    ))
-    fig.add_trace(go.Scatter(
-        x=trend["Day"], y=trend["MIS"], name="MIS", mode="lines+markers",
-        line=dict(color=COLOR_MIS, width=2.5), marker=dict(size=5),
-        hovertemplate="Day %{x}<br>MIS: %{y:,.0f} km<extra></extra>",
-    ))
-    fig.update_layout(
-        plot_bgcolor=CHART_BG, paper_bgcolor=CHART_BG, font_color=CHART_TEXT,
-        height=300, margin=dict(l=10, r=10, t=10, b=10),
-        xaxis=dict(gridcolor=CHART_GRID, title="Day of month", tickfont=dict(size=13, color=CHART_TEXT), title_font=dict(size=13, color=CHART_TEXT), dtick=2),
-        yaxis=dict(gridcolor=CHART_GRID, title="Km", tickfont=dict(size=13, color=CHART_TEXT), title_font=dict(size=13, color=CHART_TEXT), tickformat=",.0f", exponentformat="none", separatethousands=True),
-        legend=dict(orientation="h", y=1.12, font=dict(size=13, color=CHART_TEXT)),
-        hovermode="x unified",
-    )
-    with st.container(border=True):
-        st.plotly_chart(fig, use_container_width=True, key="chart_day_trend")
-
-st.markdown("### Sites")
-site_summary = df.groupby("Site", as_index=False).agg(
-    Vehicles=("Vehicle", "count"), Total_GPS=("Total GPS", "sum"), Total_MIS=("Total MIS", "sum"),
-    Flagged=("Action", lambda s: (s != "No action needed").sum()),
-)
-site_summary["Diff %"] = ((site_summary["Total_MIS"] - site_summary["Total_GPS"]) / site_summary["Total_GPS"].replace(0, pd.NA)).fillna(0)
-site_summary = site_summary.sort_values("Diff %", key=abs, ascending=False)
+# Make the prepared data available to every page.
+st.session_state.df = df
+st.session_state.daily_df = daily_df
+st.session_state.has_daily = has_daily
+st.session_state.threshold = threshold
+st.session_state.prev_entry = prev_entry
 
 
-def site_severity(diff_pct, threshold_pct):
-    t = threshold_pct / 100
-    if abs(diff_pct) > t:
-        return "critical"
-    if abs(diff_pct) > t * 0.5:
-        return "watch"
-    return "ok"
+# ---------------------------------------------------------------------------
+# Pages
+# ---------------------------------------------------------------------------
+def page_overview():
+    df = st.session_state.df
+    daily_df = st.session_state.daily_df
+    has_daily = st.session_state.has_daily
+    prev_entry = st.session_state.prev_entry
 
+    render_brand_header()
 
-site_summary["Severity"] = site_summary["Diff %"].apply(lambda d: site_severity(d, threshold))
-site_bar_colors = site_summary["Severity"].map(ACTION_COLORS)
+    total_gps = df["Total GPS"].sum()
+    total_mis = df["Total MIS"].sum()
+    overall_diff = total_mis - total_gps
+    overall_pct = (overall_diff / total_gps) if total_gps else 0
+    flagged = (df["Action"] != "No action needed").sum()
 
-n_sites = len(site_summary)
-bar_height = max(320, n_sites * 30)
+    if prev_entry:
+        gps_delta = total_gps - prev_entry["total_gps"]
+        mis_delta = total_mis - prev_entry["total_mis"]
+        gps_delta_label = f"{gps_delta:+,.0f} km vs {prev_entry['label']}"
+        mis_delta_label = f"{mis_delta:+,.0f} km vs {prev_entry['label']}"
+    else:
+        gps_delta_label = mis_delta_label = None
+        st.caption("No previous month saved yet to compare against — once you save another month, comparisons will show here automatically.")
 
-# --- Chart 1: GPS vs MIS volume by site (split into two columns to keep it compact) ---
-def make_site_volume_chart(data, chart_height):
-    fig = go.Figure()
-    fig.add_trace(go.Bar(
-        y=data["Site"], x=data["Total_GPS"], name="GPS", orientation="h",
-        marker_color=COLOR_GPS, text=data["Total_GPS"].apply(lambda v: f"{v:,.0f}"),
-        textposition="outside", textfont=dict(size=12, color=CHART_TEXT, family="IBM Plex Mono"),
-        hovertemplate="%{y}<br>GPS: %{x:,.0f} km<extra></extra>",
-    ))
-    fig.add_trace(go.Bar(
-        y=data["Site"], x=data["Total_MIS"], name="MIS", orientation="h",
-        marker_color=COLOR_MIS, text=data["Total_MIS"].apply(lambda v: f"{v:,.0f}"),
-        textposition="outside", textfont=dict(size=12, color=CHART_TEXT, family="IBM Plex Mono"),
-        hovertemplate="%{y}<br>MIS: %{x:,.0f} km<extra></extra>",
-    ))
-    fig.update_layout(
-        barmode="group", plot_bgcolor=CHART_BG, paper_bgcolor=CHART_BG, font_color=CHART_TEXT,
-        height=chart_height, margin=dict(l=10, r=50, t=10, b=30),
-        xaxis=dict(gridcolor=CHART_GRID, title="Km", tickfont=dict(size=12, color=CHART_TEXT), title_font=dict(size=13, color=CHART_TEXT), tickformat=",.0f", exponentformat="none", separatethousands=True),
-        yaxis=dict(tickfont=dict(size=13, family="Inter", color=CHART_TEXT), automargin=True),
-        legend=dict(orientation="h", y=1.05, x=0, font=dict(size=12, color=CHART_TEXT)),
-        bargap=0.28, bargroupgap=0.08,
-    )
-    return fig
+    c1, c2, c3, c4, c5 = st.columns(5)
+    gps_positive = prev_entry is not None and (total_gps - prev_entry["total_gps"]) >= 0
+    mis_positive = prev_entry is not None and (total_mis - prev_entry["total_mis"]) >= 0
+    kpi_card(c1, "📡", COLOR_GPS, "TOTAL GPS KM", f"{total_gps:,.0f}",
+             gps_delta_label.replace(" km", "") if gps_delta_label else None, gps_positive)
+    kpi_card(c2, "📝", COLOR_MIS, "TOTAL MIS KM", f"{total_mis:,.0f}",
+             mis_delta_label.replace(" km", "") if mis_delta_label else None, mis_positive)
+    kpi_card(c3, "⚠️", COLOR_DIFF, "OVERALL DIFF", f"{overall_pct*100:.1f}%",
+             f"{overall_diff:+,.0f} km", overall_diff >= 0)
+    kpi_card(c4, "🚚", COLOR_VEHICLES, "VEHICLES", f"{len(df)}",
+             f"{df['Site'].nunique()} sites", neutral=True)
+    kpi_card(c5, "🚩", COLOR_CRIT, "FLAGGED", f"{flagged}",
+             f"{flagged/len(df)*100:.0f}% of fleet", neutral=True)
 
-
-vol_sorted = site_summary.sort_values("Total_GPS", ascending=True)
-
-st.caption("GPS vs MIS total km by site — sorted by GPS volume, scroll inside the box to see all sites")
-with st.container(height=480, border=True):
-    st.plotly_chart(make_site_volume_chart(vol_sorted, bar_height), use_container_width=True, key="chart_sites_vol")
-
-# --- Chart 2: Diff % by site (vertical bars, colored by severity) ---
-site_bar_colors = site_summary["Severity"].map(ACTION_COLORS)
-fig_sites_diff = go.Figure()
-fig_sites_diff.add_trace(go.Bar(
-    x=site_summary["Site"], y=site_summary["Diff %"] * 100,
-    marker_color=site_bar_colors, name="Diff %",
-))
-fig_sites_diff.update_layout(
-    plot_bgcolor=CHART_BG, paper_bgcolor=CHART_BG, font_color=CHART_TEXT,
-    height=220, margin=dict(l=10, r=10, t=10, b=10),
-    xaxis=dict(gridcolor=CHART_GRID, tickangle=-35, tickfont=dict(color=CHART_TEXT, size=13)), yaxis=dict(gridcolor=CHART_GRID, title="Diff %", tickfont=dict(color=CHART_TEXT, size=13), title_font=dict(size=13, color=CHART_TEXT)),
-    showlegend=False,
-)
-with st.container(border=True):
-    st.plotly_chart(fig_sites_diff, use_container_width=True, key="chart_sites_diff")
-
-site_options = ["All sites"] + site_summary["Site"].tolist()
-selected_site = st.selectbox("Filter by site", site_options)
-
-
-def style_site_row(row):
-    color = ACTION_COLORS.get(row["Severity"], COLOR_TEXT)
-    styles = []
-    for col in row.index:
-        if col == "Total_GPS":
-            styles.append(f"color: {COLOR_GPS};")
-        elif col == "Total_MIS":
-            styles.append(f"color: {COLOR_MIS};")
-        elif col == "Diff %":
-            styles.append(f"color: {color}; font-weight: 600;")
-        else:
-            styles.append("")
-    return styles
-
-
-site_styled = (
-    site_summary.style
-    .apply(style_site_row, axis=1)
-    .format({"Total_GPS": "{:,.0f}", "Total_MIS": "{:,.0f}", "Diff %": "{:.1%}"})
-    .hide(axis="columns", subset=["Severity"])
-)
-st.dataframe(site_styled, use_container_width=True, hide_index=True)
-
-st.markdown("### Corrective actions")
-st.caption("Click a card to filter the vehicle table below to just those vehicles.")
-action_counts = df.groupby(["Action", "Severity"]).size().reset_index(name="Count")
-order = ["Check GPS device", "File missing MIS log", "No data either side", "Audit MIS entries",
-         "Verify unrecorded trips", "Keep an eye on it", "No action needed"]
-action_counts["order"] = action_counts["Action"].apply(lambda a: order.index(a) if a in order else 99)
-action_counts = action_counts.sort_values("order")
-
-if "action_filter" not in st.session_state:
-    st.session_state.action_filter = "All"
-
-SEVERITY_EMOJI = {"critical": "🔴", "warn": "🟠", "watch": "🟡", "ok": "🟢"}
-
-with st.container(key="corrective_actions"):
-    cols = st.columns(len(action_counts)) if len(action_counts) else [st]
-    for idx, (col, (_, row)) in enumerate(zip(cols, action_counts.iterrows())):
-        is_active = st.session_state.action_filter == row["Action"]
-        emoji = SEVERITY_EMOJI.get(row["Severity"], "⚪")
-        label = f"{emoji} {row['Count']}\n{row['Action']}"
-        if is_active:
-            label = f"✓ {emoji} {row['Count']}\n{row['Action']}"
-        with col:
-            with st.container(key=f"actsev_{row['Severity']}_{idx}"):
-                if st.button(label, key=f"actbtn_{row['Action']}", use_container_width=True):
-                    st.session_state.action_filter = "All" if is_active else row["Action"]
-                    st.rerun()
-
-st.markdown("### Vehicles")
-if st.session_state.action_filter != "All":
-    fc1, fc2 = st.columns([5, 1])
-    fc1.info(f"Filtered to action: **{st.session_state.action_filter}**")
-    if fc2.button("✕ Clear filter", use_container_width=True):
-        st.session_state.action_filter = "All"
-        st.rerun()
-
-col_a, col_b, col_c = st.columns([2, 1, 1])
-search = col_a.text_input("Search vehicle no. or site")
-only_flagged = col_b.checkbox("Flagged only")
-action_filter = col_c.selectbox("Action", ["All"] + order, key="action_filter")
-
-view = df.copy()
-if selected_site != "All sites":
-    view = view[view["Site"] == selected_site]
-if only_flagged:
-    view = view[view["Action"] != "No action needed"]
-if action_filter != "All":
-    view = view[view["Action"] == action_filter]
-if search.strip():
-    q = search.strip().lower()
-    view = view[view["Vehicle"].str.lower().str.contains(q) | view["Site"].str.lower().str.contains(q)]
-
-view = view.sort_values("Diff %", key=abs, ascending=False)
-st.caption(f"{len(view)} vehicles")
-
-display_cols = ["Vehicle", "Site", "Total GPS", "Total MIS", "Diff %", "Action", "Source", "Severity"]
-display_df = view[display_cols]
-
-ACTION_BG = {
-    "critical": "rgba(255,93,93,0.16)",
-    "warn": "rgba(245,166,35,0.16)",
-    "watch": "rgba(245,166,35,0.10)",
-    "ok": "rgba(61,220,132,0.14)",
-}
-
-
-def style_row(row):
-    color = ACTION_COLORS.get(row["Severity"], COLOR_TEXT)
-    bg = ACTION_BG.get(row["Severity"], "")
-    styles = []
-    for col in row.index:
-        if col == "Total GPS":
-            styles.append(f"color: {COLOR_GPS};")
-        elif col == "Total MIS":
-            styles.append(f"color: {COLOR_MIS};")
-        elif col == "Diff %":
-            styles.append(f"color: {color}; font-weight: 600;")
-        elif col == "Action":
-            styles.append(f"color: {color}; background-color: {bg}; font-weight: 500; border-radius: 5px;")
-        else:
-            styles.append("")
-    return styles
-
-
-styled = (
-    display_df.style
-    .apply(style_row, axis=1)
-    .format({"Total GPS": "{:,.1f}", "Total MIS": "{:,.1f}", "Diff %": "{:.1%}"})
-    .hide(axis="columns", subset=["Severity"])
-)
-
-st.dataframe(styled, use_container_width=True, hide_index=True, height=380)
-
-st.markdown("### Vehicle drill-down")
-veh_pick = st.selectbox("Pick a vehicle to see its daily GPS vs MIS chart", view["Vehicle"].tolist() if len(view) else df["Vehicle"].tolist())
-if veh_pick:
-    row = df[df["Vehicle"] == veh_pick].iloc[0]
-    color = ACTION_COLORS[row["Severity"]]
-    st.markdown(
-        f"<div class='action-card' style='border-color:{color}55;'>"
-        f"<b style='color:{color};'>{row['Action']}</b><br>"
-        f"<span style='color:{COLOR_MUTED}; font-size:13px;'>{row['ActionDetail']}</span></div>",
-        unsafe_allow_html=True,
-    )
-    vd = daily_df[daily_df["Vehicle"] == veh_pick]
-    if has_daily and len(vd):
-        fig2 = go.Figure()
-        fig2.add_trace(go.Scatter(
-            x=vd["Day"], y=vd["GPS"], name="GPS", mode="lines+markers",
+    if has_daily:
+        st.markdown("### Day-wise total km, all vehicles")
+        trend = daily_df.groupby("Day", as_index=False)[["GPS", "MIS"]].sum()
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(
+            x=trend["Day"], y=trend["GPS"], name="GPS", mode="lines+markers",
             line=dict(color=COLOR_GPS, width=2.5), marker=dict(size=5),
-            hovertemplate="Day %{x}<br>GPS: %{y:,.1f} km<extra></extra>",
+            hovertemplate="Day %{x}<br>GPS: %{y:,.0f} km<extra></extra>",
         ))
-        fig2.add_trace(go.Scatter(
-            x=vd["Day"], y=vd["MIS"], name="MIS", mode="lines+markers",
+        fig.add_trace(go.Scatter(
+            x=trend["Day"], y=trend["MIS"], name="MIS", mode="lines+markers",
             line=dict(color=COLOR_MIS, width=2.5), marker=dict(size=5),
-            hovertemplate="Day %{x}<br>MIS: %{y:,.1f} km<extra></extra>",
+            hovertemplate="Day %{x}<br>MIS: %{y:,.0f} km<extra></extra>",
         ))
-        fig2.update_layout(
+        fig.update_layout(
             plot_bgcolor=CHART_BG, paper_bgcolor=CHART_BG, font_color=CHART_TEXT,
-            height=260, margin=dict(l=10, r=10, t=10, b=10),
+            height=340, margin=dict(l=10, r=10, t=10, b=10),
             xaxis=dict(gridcolor=CHART_GRID, title="Day of month", tickfont=dict(size=13, color=CHART_TEXT), title_font=dict(size=13, color=CHART_TEXT), dtick=2),
             yaxis=dict(gridcolor=CHART_GRID, title="Km", tickfont=dict(size=13, color=CHART_TEXT), title_font=dict(size=13, color=CHART_TEXT), tickformat=",.0f", exponentformat="none", separatethousands=True),
-            legend=dict(orientation="h", y=1.12, font=dict(size=13, color=CHART_TEXT)),
+            legend=dict(orientation="h", y=1.1, font=dict(size=13, color=CHART_TEXT)),
             hovermode="x unified",
         )
         with st.container(border=True):
-            st.plotly_chart(fig2, use_container_width=True, key="chart_vehicle_drilldown")
+            st.plotly_chart(fig, use_container_width=True, key="chart_day_trend")
     else:
         st.caption("Daily chart isn't available for saved history months — only totals are stored.")
 
-st.caption(f"Generated {datetime.now().strftime('%d %b %Y, %H:%M')} - runs entirely on your machine, nothing uploaded externally.")
 
-# ---------------------------------------------------------------------------
-# Monthly history — trend across all saved months + manage saved entries
-# ---------------------------------------------------------------------------
-hist = load_history()  # reload in case this run just saved a new entry
-if hist:
-    st.markdown("---")
+def compute_site_summary(df, threshold):
+    site_summary = df.groupby("Site", as_index=False).agg(
+        Vehicles=("Vehicle", "count"), Total_GPS=("Total GPS", "sum"), Total_MIS=("Total MIS", "sum"),
+        Flagged=("Action", lambda s: (s != "No action needed").sum()),
+    )
+    site_summary["Diff %"] = ((site_summary["Total_MIS"] - site_summary["Total_GPS"]) / site_summary["Total_GPS"].replace(0, pd.NA)).fillna(0)
+    site_summary = site_summary.sort_values("Diff %", key=abs, ascending=False)
+
+    def site_severity(diff_pct, threshold_pct):
+        t = threshold_pct / 100
+        if abs(diff_pct) > t:
+            return "critical"
+        if abs(diff_pct) > t * 0.5:
+            return "watch"
+        return "ok"
+
+    site_summary["Severity"] = site_summary["Diff %"].apply(lambda d: site_severity(d, threshold))
+    return site_summary
+
+
+def page_sites():
+    df = st.session_state.df
+    threshold = st.session_state.threshold
+
+    render_brand_header()
+    st.markdown("### Sites")
+
+    site_summary = compute_site_summary(df, threshold)
+    n_sites = len(site_summary)
+    bar_height = max(320, n_sites * 30)
+
+    def make_site_volume_chart(data, chart_height):
+        fig = go.Figure()
+        fig.add_trace(go.Bar(
+            y=data["Site"], x=data["Total_GPS"], name="GPS", orientation="h",
+            marker_color=COLOR_GPS, text=data["Total_GPS"].apply(lambda v: f"{v:,.0f}"),
+            textposition="outside", textfont=dict(size=12, color=CHART_TEXT, family="IBM Plex Mono"),
+            hovertemplate="%{y}<br>GPS: %{x:,.0f} km<extra></extra>",
+        ))
+        fig.add_trace(go.Bar(
+            y=data["Site"], x=data["Total_MIS"], name="MIS", orientation="h",
+            marker_color=COLOR_MIS, text=data["Total_MIS"].apply(lambda v: f"{v:,.0f}"),
+            textposition="outside", textfont=dict(size=12, color=CHART_TEXT, family="IBM Plex Mono"),
+            hovertemplate="%{y}<br>MIS: %{x:,.0f} km<extra></extra>",
+        ))
+        fig.update_layout(
+            barmode="group", plot_bgcolor=CHART_BG, paper_bgcolor=CHART_BG, font_color=CHART_TEXT,
+            height=chart_height, margin=dict(l=10, r=50, t=10, b=30),
+            xaxis=dict(gridcolor=CHART_GRID, title="Km", tickfont=dict(size=12, color=CHART_TEXT), title_font=dict(size=13, color=CHART_TEXT), tickformat=",.0f", exponentformat="none", separatethousands=True),
+            yaxis=dict(tickfont=dict(size=13, family="Inter", color=CHART_TEXT), automargin=True),
+            legend=dict(orientation="h", y=1.05, x=0, font=dict(size=12, color=CHART_TEXT)),
+            bargap=0.28, bargroupgap=0.08,
+        )
+        return fig
+
+    vol_sorted = site_summary.sort_values("Total_GPS", ascending=True)
+
+    st.caption("GPS vs MIS total km by site — sorted by GPS volume, scroll inside the box to see all sites")
+    with st.container(height=480, border=True):
+        st.plotly_chart(make_site_volume_chart(vol_sorted, bar_height), use_container_width=True, key="chart_sites_vol")
+
+    site_bar_colors = site_summary["Severity"].map(ACTION_COLORS)
+    fig_sites_diff = go.Figure()
+    fig_sites_diff.add_trace(go.Bar(
+        x=site_summary["Site"], y=site_summary["Diff %"] * 100,
+        marker_color=site_bar_colors, name="Diff %",
+    ))
+    fig_sites_diff.update_layout(
+        plot_bgcolor=CHART_BG, paper_bgcolor=CHART_BG, font_color=CHART_TEXT,
+        height=260, margin=dict(l=10, r=10, t=10, b=10),
+        xaxis=dict(gridcolor=CHART_GRID, tickangle=-35, tickfont=dict(color=CHART_TEXT, size=13)), yaxis=dict(gridcolor=CHART_GRID, title="Diff %", tickfont=dict(color=CHART_TEXT, size=13), title_font=dict(size=13, color=CHART_TEXT)),
+        showlegend=False,
+    )
+    with st.container(border=True):
+        st.plotly_chart(fig_sites_diff, use_container_width=True, key="chart_sites_diff")
+
+    def style_site_row(row):
+        color = ACTION_COLORS.get(row["Severity"], COLOR_TEXT)
+        styles = []
+        for col in row.index:
+            if col == "Total_GPS":
+                styles.append(f"color: {COLOR_GPS};")
+            elif col == "Total_MIS":
+                styles.append(f"color: {COLOR_MIS};")
+            elif col == "Diff %":
+                styles.append(f"color: {color}; font-weight: 600;")
+            else:
+                styles.append("")
+        return styles
+
+    site_styled = (
+        site_summary.style
+        .apply(style_site_row, axis=1)
+        .format({"Total_GPS": "{:,.0f}", "Total_MIS": "{:,.0f}", "Diff %": "{:.1%}"})
+        .hide(axis="columns", subset=["Severity"])
+    )
+    st.dataframe(site_styled, use_container_width=True, hide_index=True)
+
+
+def page_vehicles():
+    df = st.session_state.df
+
+    render_brand_header()
+
+    st.markdown("### Corrective actions")
+    st.caption("Click a card to filter the vehicle table below to just those vehicles.")
+    order = ["Check GPS device", "File missing MIS log", "No data either side", "Audit MIS entries",
+             "Verify unrecorded trips", "Keep an eye on it", "No action needed"]
+    action_counts = df.groupby(["Action", "Severity"]).size().reset_index(name="Count")
+    action_counts["order"] = action_counts["Action"].apply(lambda a: order.index(a) if a in order else 99)
+    action_counts = action_counts.sort_values("order")
+
+    if "action_filter" not in st.session_state:
+        st.session_state.action_filter = "All"
+
+    SEVERITY_EMOJI = {"critical": "🔴", "warn": "🟠", "watch": "🟡", "ok": "🟢"}
+
+    with st.container(key="corrective_actions"):
+        cols = st.columns(len(action_counts)) if len(action_counts) else [st]
+        for idx, (col, (_, row)) in enumerate(zip(cols, action_counts.iterrows())):
+            is_active = st.session_state.action_filter == row["Action"]
+            emoji = SEVERITY_EMOJI.get(row["Severity"], "⚪")
+            label = f"{emoji} {row['Count']}\n{row['Action']}"
+            if is_active:
+                label = f"✓ {emoji} {row['Count']}\n{row['Action']}"
+            with col:
+                with st.container(key=f"actsev_{row['Severity']}_{idx}"):
+                    if st.button(label, key=f"actbtn_{row['Action']}", use_container_width=True):
+                        st.session_state.action_filter = "All" if is_active else row["Action"]
+                        st.rerun()
+
+    st.markdown("### Vehicles")
+    if st.session_state.action_filter != "All":
+        fc1, fc2 = st.columns([5, 1])
+        fc1.info(f"Filtered to action: **{st.session_state.action_filter}**")
+        if fc2.button("✕ Clear filter", use_container_width=True):
+            st.session_state.action_filter = "All"
+            st.rerun()
+
+    col_a, col_b, col_c, col_d = st.columns([1.3, 2, 1, 1.3])
+    site_options = ["All sites"] + sorted(df["Site"].unique().tolist())
+    selected_site = col_a.selectbox("Site", site_options)
+    search = col_b.text_input("Search vehicle no. or site")
+    only_flagged = col_c.checkbox("Flagged only")
+    action_filter = col_d.selectbox("Action", ["All"] + order, key="action_filter")
+
+    view = df.copy()
+    if selected_site != "All sites":
+        view = view[view["Site"] == selected_site]
+    if only_flagged:
+        view = view[view["Action"] != "No action needed"]
+    if action_filter != "All":
+        view = view[view["Action"] == action_filter]
+    if search.strip():
+        q = search.strip().lower()
+        view = view[view["Vehicle"].str.lower().str.contains(q) | view["Site"].str.lower().str.contains(q)]
+
+    view = view.sort_values("Diff %", key=abs, ascending=False)
+    st.caption(f"{len(view)} vehicles")
+
+    display_cols = ["Vehicle", "Site", "Total GPS", "Total MIS", "Diff %", "Action", "Source", "Severity"]
+    display_df = view[display_cols]
+
+    ACTION_BG = {
+        "critical": "rgba(255,93,93,0.16)",
+        "warn": "rgba(245,166,35,0.16)",
+        "watch": "rgba(245,166,35,0.10)",
+        "ok": "rgba(61,220,132,0.14)",
+    }
+
+    def style_row(row):
+        color = ACTION_COLORS.get(row["Severity"], COLOR_TEXT)
+        bg = ACTION_BG.get(row["Severity"], "")
+        styles = []
+        for col in row.index:
+            if col == "Total GPS":
+                styles.append(f"color: {COLOR_GPS};")
+            elif col == "Total MIS":
+                styles.append(f"color: {COLOR_MIS};")
+            elif col == "Diff %":
+                styles.append(f"color: {color}; font-weight: 600;")
+            elif col == "Action":
+                styles.append(f"color: {color}; background-color: {bg}; font-weight: 500; border-radius: 5px;")
+            else:
+                styles.append("")
+        return styles
+
+    styled = (
+        display_df.style
+        .apply(style_row, axis=1)
+        .format({"Total GPS": "{:,.1f}", "Total MIS": "{:,.1f}", "Diff %": "{:.1%}"})
+        .hide(axis="columns", subset=["Severity"])
+    )
+
+    st.dataframe(styled, use_container_width=True, hide_index=True, height=460)
+
+
+def page_drilldown():
+    df = st.session_state.df
+    daily_df = st.session_state.daily_df
+    has_daily = st.session_state.has_daily
+
+    render_brand_header()
+    st.markdown("### Vehicle drill-down")
+    veh_pick = st.selectbox("Pick a vehicle to see its daily GPS vs MIS chart", df["Vehicle"].tolist())
+    if veh_pick:
+        row = df[df["Vehicle"] == veh_pick].iloc[0]
+        color = ACTION_COLORS[row["Severity"]]
+        st.markdown(
+            f"<div class='action-card' style='border-color:{color}55;'>"
+            f"<b style='color:{color};'>{row['Action']}</b><br>"
+            f"<span style='color:{COLOR_MUTED}; font-size:13px;'>{row['ActionDetail']}</span></div>",
+            unsafe_allow_html=True,
+        )
+        vd = daily_df[daily_df["Vehicle"] == veh_pick]
+        if has_daily and len(vd):
+            fig2 = go.Figure()
+            fig2.add_trace(go.Scatter(
+                x=vd["Day"], y=vd["GPS"], name="GPS", mode="lines+markers",
+                line=dict(color=COLOR_GPS, width=2.5), marker=dict(size=5),
+                hovertemplate="Day %{x}<br>GPS: %{y:,.1f} km<extra></extra>",
+            ))
+            fig2.add_trace(go.Scatter(
+                x=vd["Day"], y=vd["MIS"], name="MIS", mode="lines+markers",
+                line=dict(color=COLOR_MIS, width=2.5), marker=dict(size=5),
+                hovertemplate="Day %{x}<br>MIS: %{y:,.1f} km<extra></extra>",
+            ))
+            fig2.update_layout(
+                plot_bgcolor=CHART_BG, paper_bgcolor=CHART_BG, font_color=CHART_TEXT,
+                height=340, margin=dict(l=10, r=10, t=10, b=10),
+                xaxis=dict(gridcolor=CHART_GRID, title="Day of month", tickfont=dict(size=13, color=CHART_TEXT), title_font=dict(size=13, color=CHART_TEXT), dtick=2),
+                yaxis=dict(gridcolor=CHART_GRID, title="Km", tickfont=dict(size=13, color=CHART_TEXT), title_font=dict(size=13, color=CHART_TEXT), tickformat=",.0f", exponentformat="none", separatethousands=True),
+                legend=dict(orientation="h", y=1.1, font=dict(size=13, color=CHART_TEXT)),
+                hovermode="x unified",
+            )
+            with st.container(border=True):
+                st.plotly_chart(fig2, use_container_width=True, key="chart_vehicle_drilldown")
+        else:
+            st.caption("Daily chart isn't available for saved history months — only totals are stored.")
+
+
+def page_history():
+    render_brand_header()
     st.markdown("### Monthly history")
+
+    hist = load_history()  # reload in case this run just saved a new entry
+    if not hist:
+        st.info("No saved months yet — upload a file to start building history.")
+        return
+
     st.caption("Every file you upload is saved here automatically under its month label, even after you upload a different file or restart the app.")
 
     sorted_entries = sorted(hist.values(), key=lambda x: x["key"])
@@ -839,10 +895,10 @@ if hist:
     fig3.add_trace(go.Scatter(x=hist_df["Month"], y=hist_df["Total MIS"], name="MIS", line=dict(color=COLOR_MIS, width=2), mode="lines+markers", hovertemplate="%{x}<br>MIS: %{y:,.0f} km<extra></extra>"))
     fig3.update_layout(
         plot_bgcolor=CHART_BG, paper_bgcolor=CHART_BG, font_color=CHART_TEXT,
-        height=260, margin=dict(l=10, r=10, t=10, b=10),
+        height=300, margin=dict(l=10, r=10, t=10, b=10),
         xaxis=dict(gridcolor=CHART_GRID, tickfont=dict(size=13, color=CHART_TEXT)),
         yaxis=dict(gridcolor=CHART_GRID, tickfont=dict(size=13, color=CHART_TEXT), title="Km", title_font=dict(size=13, color=CHART_TEXT), tickformat=",.0f", exponentformat="none", separatethousands=True),
-        legend=dict(orientation="h", y=1.15, font=dict(size=13, color=CHART_TEXT)),
+        legend=dict(orientation="h", y=1.12, font=dict(size=13, color=CHART_TEXT)),
     )
     with st.container(border=True):
         st.plotly_chart(fig3, use_container_width=True, key="chart_monthly_history")
@@ -859,3 +915,16 @@ if hist:
             del hist[key_to_delete]
             save_history(hist)
             st.success(f"Removed {del_choice}. Refresh the page to see the updated list.")
+
+
+# ---------------------------------------------------------------------------
+# Navigation
+# ---------------------------------------------------------------------------
+pg = st.navigation([
+    st.Page(page_overview, title="Overview", icon="📊", url_path="overview", default=True),
+    st.Page(page_sites, title="Sites", icon="🏢", url_path="sites"),
+    st.Page(page_vehicles, title="Vehicles", icon="🚚", url_path="vehicles"),
+    st.Page(page_drilldown, title="Vehicle Drill-down", icon="🔍", url_path="drilldown"),
+    st.Page(page_history, title="Monthly History", icon="📅", url_path="history"),
+])
+pg.run()
