@@ -46,9 +46,8 @@ COLOR_WARN = "#FFC93C"
 COLOR_DIFF = "#B14EFF"
 COLOR_VEHICLES = "#4C6FFF"
 COLOR_FLAGGED = "#FF3D9A"
-CHART_BG = "#0A0E17"
 CHART_TEXT = "#F5F7FA"
-CHART_GRID = "#28354d"
+CHART_GRID = "#33456b"
 
 
 def hex_to_rgba(hex_color, alpha):
@@ -56,12 +55,24 @@ def hex_to_rgba(hex_color, alpha):
     r, g, b = int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
     return f"rgba({r},{g},{b},{alpha})"
 
+
+# Chart panels get their own richer, slightly-lighter-than-page background so
+# plots read as distinct glowing cards rather than blending into the page.
+CHART_BG = "#161f38"
+
+PAGE_BG = (
+    f"radial-gradient(1100px circle at 6% -8%, {hex_to_rgba(COLOR_GPS, 0.10)}, transparent 42%),"
+    f"radial-gradient(1000px circle at 100% 8%, {hex_to_rgba(COLOR_DIFF, 0.10)}, transparent 40%),"
+    f"radial-gradient(900px circle at 50% 105%, {hex_to_rgba(COLOR_MIS, 0.07)}, transparent 40%),"
+    f"linear-gradient(170deg, #101a30 0%, #080c16 55%, {COLOR_BG} 100%)"
+)
+
 st.markdown(f"""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
 
 html, body, [class*="css"] {{ font-family: 'Inter', sans-serif; font-size: 15px; }}
-.stApp {{ background-color: {COLOR_BG}; color: {COLOR_TEXT}; }}
+.stApp {{ background: {PAGE_BG} {COLOR_BG}; background-attachment: fixed; color: {COLOR_TEXT}; }}
 #MainMenu {{ visibility: hidden; }}
 footer {{ visibility: hidden; }}
 
@@ -114,11 +125,18 @@ p, label, span, div {{ font-size: 15px; font-weight: 500; }}
     padding: 10px 14px; margin-bottom: 6px;
 }}
 
-/* Native bordered containers (used to box charts) — match KPI card styling */
+/* Native bordered containers (used to box charts) — glowing panel cards */
 [data-testid="stVerticalBlockBorderWrapper"] {{
-    border-radius: 12px !important; box-shadow: 0 0 12px rgba(0,0,0,0.3);
+    border-radius: 14px !important;
+    box-shadow: 0 0 0 1px {hex_to_rgba(COLOR_GPS, 0.10)},
+                0 12px 30px rgba(0,0,0,0.45),
+                0 0 26px {hex_to_rgba(COLOR_DIFF, 0.12)};
 }}
-[data-testid="stVerticalBlockBorderWrapper"] > div {{ border-color: {COLOR_BORDER} !important; }}
+[data-testid="stVerticalBlockBorderWrapper"] > div {{
+    border-color: {COLOR_BORDER} !important;
+    background: linear-gradient(165deg, {CHART_BG}, {COLOR_PANEL} 140%) !important;
+    border-radius: 14px !important;
+}}
 
 /* Dataframe / tables */
 .stDataFrame, [data-testid="stDataFrame"] {{
