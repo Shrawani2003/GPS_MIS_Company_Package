@@ -88,140 +88,145 @@ def hex_to_rgba(hex_color, alpha):
 
 st.markdown(f"""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700;800&display=swap');
 
-html, body, [class*="css"] {{ font-family: 'Inter', sans-serif; font-size: 15px; }}
+html, body, [class*="css"] {{ font-family: 'Inter', sans-serif; font-size: 15px; line-height: 1.55; }}
 .stApp {{ background: {COLOR_BG}; color: {COLOR_TEXT}; }}
 footer {{ visibility: hidden; }}
 
-h1 {{ font-family: 'Space Grotesk', sans-serif !important; font-weight: 700 !important; color: {COLOR_TEXT} !important; font-size: 30px !important; }}
-h2, h3 {{ font-family: 'Space Grotesk', sans-serif !important; font-weight: 700 !important; color: {COLOR_TEXT} !important; font-size: 21px !important; }}
-h4 {{ font-family: 'Space Grotesk', sans-serif !important; font-weight: 700 !important; color: {COLOR_TEXT} !important; font-size: 17px !important; }}
-p, label, span, div {{ font-size: 15px; font-weight: 500; }}
+h1 {{ font-family: 'Space Grotesk', sans-serif !important; font-weight: 700 !important; color: {COLOR_TEXT} !important; font-size: 32px !important; letter-spacing: -0.5px; }}
+h2, h3 {{ font-family: 'Space Grotesk', sans-serif !important; font-weight: 600 !important; color: {COLOR_TEXT} !important; font-size: 20px !important; letter-spacing: -0.2px; margin-top: 8px !important; }}
+h4 {{ font-family: 'Space Grotesk', sans-serif !important; font-weight: 600 !important; color: {COLOR_TEXT} !important; font-size: 16px !important; }}
+p, label, span, div {{ font-size: 15px; font-weight: 400; }}
 
-/* Widget labels (Viewing, Flag threshold, Search, etc.) — bold and dark */
-[data-testid="stWidgetLabel"] p, [data-testid="stWidgetLabel"] label {{
-    font-weight: 700 !important; color: {COLOR_TEXT} !important; font-size: 15px !important;
+.eyebrow {{
+    color: {COLOR_MUTED}; font-family: 'Inter', sans-serif; font-weight: 700; font-size: 12px;
+    letter-spacing: 1.6px; text-transform: uppercase; margin-bottom: 4px;
 }}
-[data-testid="stMarkdownContainer"] p {{ font-weight: 500; color: {COLOR_TEXT}; }}
+
+/* Widget labels (Viewing, Flag threshold, Search, etc.) */
+[data-testid="stWidgetLabel"] p, [data-testid="stWidgetLabel"] label {{
+    font-weight: 600 !important; color: {COLOR_TEXT} !important; font-size: 14px !important;
+}}
+[data-testid="stMarkdownContainer"] p {{ font-weight: 400; color: {COLOR_TEXT}; }}
 
 /* Custom KPI cards */
 .kpi-card {{
     background: {COLOR_BG};
-    border: 1px solid color-mix(in srgb, var(--accent) 28%, {COLOR_BORDER}); border-radius: 12px;
-    padding: 18px 18px 16px; position: relative; overflow: hidden;
-    box-shadow: 0 1px 2px {SHADOW_SM},
-                0 10px 22px color-mix(in srgb, var(--accent) 10%, transparent);
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    border: 1px solid {COLOR_BORDER}; border-radius: 16px;
+    padding: 22px 22px 20px; position: relative; overflow: hidden;
+    box-shadow: 0 1px 2px {SHADOW_SM}, 0 6px 16px {SHADOW_LG};
+    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
     display: flex; flex-direction: column; justify-content: flex-start;
-    height: 212px; box-sizing: border-box;
+    min-height: 200px; box-sizing: border-box;
 }}
 .kpi-card:hover {{
-    transform: translateY(-3px);
-    box-shadow: 0 4px 10px {SHADOW_LG},
-                0 16px 30px color-mix(in srgb, var(--accent) 20%, transparent);
-}}
-.kpi-topbar {{
-    position: absolute; top: 0; left: 0; right: 0; height: 4px;
-    background: var(--accent);
+    transform: translateY(-2px);
+    border-color: color-mix(in srgb, var(--accent) 45%, {COLOR_BORDER});
+    box-shadow: 0 2px 4px {SHADOW_SM}, 0 12px 24px {SHADOW_LG};
 }}
 .kpi-icon {{
-    width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center;
-    justify-content: center; font-size: 18px; margin-bottom: 14px; color: var(--accent);
-    background: color-mix(in srgb, var(--accent) 20%, transparent);
-    box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 20%, transparent);
+    width: 42px; height: 42px; border-radius: 11px; display: flex; align-items: center;
+    justify-content: center; font-size: 19px; margin-bottom: 16px; color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 13%, transparent);
 }}
-.kpi-label {{ color: {COLOR_MUTED}; font-size: 13px; letter-spacing: 0.6px; text-transform: uppercase; font-weight: 700; margin-bottom: 4px; }}
-.kpi-value {{ color: {COLOR_TEXT}; font-family: 'IBM Plex Mono', monospace; font-size: 22px; font-weight: 700; margin-bottom: 8px; white-space: nowrap; }}
-.kpi-delta {{ display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 700; padding: 3px 9px; border-radius: 20px; font-family: 'IBM Plex Mono', monospace; }}
+.kpi-label {{ color: {COLOR_MUTED}; font-size: 12px; letter-spacing: 0.7px; text-transform: uppercase; font-weight: 600; margin-bottom: 6px; }}
+.kpi-value {{ color: {COLOR_TEXT}; font-family: 'Inter', sans-serif; font-variant-numeric: tabular-nums; font-size: 30px; font-weight: 700; margin-bottom: 10px; white-space: nowrap; letter-spacing: -0.5px; }}
+.kpi-delta {{ display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 20px; font-variant-numeric: tabular-nums; }}
 
 .action-card {{
-    background: {COLOR_PANEL}; border: 1px solid {COLOR_BORDER}; border-radius: 8px;
-    padding: 10px 14px; margin-bottom: 6px;
+    background: {COLOR_PANEL}; border: 1px solid {COLOR_BORDER}; border-radius: 10px;
+    padding: 12px 16px; margin-bottom: 6px;
 }}
 
 /* Native bordered containers (used to box charts) */
 [data-testid="stVerticalBlockBorderWrapper"] {{
-    border-radius: 14px !important;
-    box-shadow: 0 1px 2px {SHADOW_SM}, 0 8px 20px {SHADOW_LG};
+    border-radius: 16px !important;
+    box-shadow: 0 1px 2px {SHADOW_SM}, 0 6px 16px {SHADOW_LG};
 }}
 [data-testid="stVerticalBlockBorderWrapper"] > div {{
     border-color: {COLOR_BORDER} !important;
     background: {CHART_BG} !important;
-    border-radius: 14px !important;
+    border-radius: 16px !important;
 }}
 
 /* Dataframe / tables */
 .stDataFrame, [data-testid="stDataFrame"] {{
-    border: 1px solid {COLOR_BORDER} !important; border-radius: 10px !important; overflow: hidden;
+    border: 1px solid {COLOR_BORDER} !important; border-radius: 12px !important; overflow: hidden;
 }}
-[data-testid="stDataFrame"] * {{ font-family: 'IBM Plex Mono', monospace !important; font-size: 13px !important; }}
 
 /* Inputs */
 .stTextInput input, .stSelectbox [data-baseweb="select"] > div, .stTextInput > div > div {{
-    background: {COLOR_PANEL} !important; border: 1px solid {COLOR_BORDER} !important;
-    color: {COLOR_TEXT} !important; border-radius: 7px !important; font-size: 15px !important;
+    background: {COLOR_BG} !important; border: 1px solid {COLOR_BORDER} !important;
+    color: {COLOR_TEXT} !important; border-radius: 8px !important; font-size: 14px !important;
 }}
 .stSlider [data-baseweb="slider"] {{ padding-top: 6px; }}
-.stSlider [role="slider"] {{ background: {COLOR_MIS} !important; box-shadow: 0 0 0 5px {hex_to_rgba(COLOR_MIS, 0.18)} !important; }}
-.stSlider div[data-baseweb="slider"] > div > div {{ background: linear-gradient(90deg, {COLOR_GPS}, {COLOR_DIFF}, {COLOR_MIS}) !important; }}
+.stSlider [role="slider"] {{ background: {COLOR_VEHICLES} !important; box-shadow: 0 0 0 5px {hex_to_rgba(COLOR_VEHICLES, 0.15)} !important; }}
+.stSlider div[data-baseweb="slider"] > div > div {{ background: {COLOR_VEHICLES} !important; }}
 
 /* File uploader */
 [data-testid="stFileUploaderDropzone"] {{
-    background: linear-gradient(135deg, {hex_to_rgba(COLOR_GPS, 0.05)}, {COLOR_PANEL} 70%) !important;
+    background: {COLOR_PANEL} !important;
     border: 1.5px dashed {COLOR_BORDER} !important; border-radius: 12px !important;
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }}
-[data-testid="stFileUploaderDropzone"]:hover {{ border-color: {COLOR_GPS} !important; box-shadow: 0 0 0 4px {hex_to_rgba(COLOR_GPS, 0.12)} !important; }}
+[data-testid="stFileUploaderDropzone"]:hover {{ border-color: {COLOR_VEHICLES} !important; box-shadow: 0 0 0 3px {hex_to_rgba(COLOR_VEHICLES, 0.10)} !important; }}
 
 /* Buttons — normal size by default */
 .stButton button, .stFormSubmitButton button {{
-    background: linear-gradient(135deg, {COLOR_VEHICLES}, {COLOR_GPS}) !important; color: #FFFFFF !important; border: none !important;
-    border-radius: 7px !important; font-weight: 600 !important; font-size: 14px !important;
-    padding: 0.35rem 0.8rem !important; transition: transform 0.1s ease, opacity 0.1s ease, box-shadow 0.15s ease;
-    box-shadow: 0 2px 8px {hex_to_rgba(COLOR_GPS, 0.28)};
+    background: {COLOR_VEHICLES} !important; color: #FFFFFF !important; border: none !important;
+    border-radius: 8px !important; font-weight: 600 !important; font-size: 14px !important;
+    padding: 0.4rem 1rem !important; transition: background 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
+    box-shadow: 0 1px 2px {SHADOW_SM};
 }}
 .stButton button:hover, .stFormSubmitButton button:hover {{
-    opacity: 0.92; transform: translateY(-1px); box-shadow: 0 4px 14px {hex_to_rgba(COLOR_GPS, 0.4)};
+    background: color-mix(in srgb, {COLOR_VEHICLES} 88%, black) !important;
+    transform: translateY(-1px); box-shadow: 0 4px 10px {SHADOW_LG};
 }}
 
-/* Corrective-action buttons only — bigger, card-like, two-line label */
+/* Corrective-action tiles — soft status cards, not solid buttons */
 .st-key-corrective_actions button {{
-    white-space: pre-line !important; line-height: 1.3 !important; min-height: 54px !important;
-    font-family: 'IBM Plex Mono', monospace !important; font-size: 13px !important; font-weight: 700 !important;
-    box-shadow: 0 2px 8px {SHADOW_LG};
+    white-space: pre-line !important; line-height: 1.35 !important; min-height: 58px !important;
+    font-family: 'Inter', sans-serif !important; font-size: 13px !important; font-weight: 600 !important;
+    border-radius: 12px !important; text-align: left !important;
+    box-shadow: 0 1px 2px {SHADOW_SM} !important;
 }}
 
-/* Corrective-action buttons colored by severity */
+/* Corrective-action tiles colored by severity */
 [class*="st-key-actsev_critical"] button {{
-    background: linear-gradient(135deg, {COLOR_CRIT}, #9F1B1B) !important; color: #FFF !important;
-    box-shadow: 0 2px 10px {hex_to_rgba(COLOR_CRIT, 0.3)} !important;
+    background: color-mix(in srgb, {COLOR_CRIT} 8%, {COLOR_BG}) !important;
+    border: 1px solid color-mix(in srgb, {COLOR_CRIT} 30%, {COLOR_BORDER}) !important;
+    border-left: 3px solid {COLOR_CRIT} !important; color: {COLOR_CRIT} !important;
 }}
 [class*="st-key-actsev_warn"] button {{
-    background: linear-gradient(135deg, {COLOR_WARN}, #7C3806) !important; color: #FFF !important;
-    box-shadow: 0 2px 10px {hex_to_rgba(COLOR_WARN, 0.3)} !important;
+    background: color-mix(in srgb, {COLOR_WARN} 8%, {COLOR_BG}) !important;
+    border: 1px solid color-mix(in srgb, {COLOR_WARN} 30%, {COLOR_BORDER}) !important;
+    border-left: 3px solid {COLOR_WARN} !important; color: {COLOR_WARN} !important;
 }}
 [class*="st-key-actsev_watch"] button {{
-    background: linear-gradient(135deg, #F59E0B, {COLOR_WARN}) !important; color: #FFF !important; opacity: 0.94;
-    box-shadow: 0 2px 10px {hex_to_rgba(COLOR_WARN, 0.25)} !important;
+    background: color-mix(in srgb, {COLOR_WARN} 5%, {COLOR_BG}) !important;
+    border: 1px solid color-mix(in srgb, {COLOR_WARN} 20%, {COLOR_BORDER}) !important;
+    border-left: 3px solid color-mix(in srgb, {COLOR_WARN} 55%, {COLOR_BORDER}) !important; color: {COLOR_WARN} !important;
 }}
 [class*="st-key-actsev_ok"] button {{
-    background: linear-gradient(135deg, {COLOR_OK}, #0E7A38) !important; color: #FFF !important;
-    box-shadow: 0 2px 10px {hex_to_rgba(COLOR_OK, 0.3)} !important;
+    background: color-mix(in srgb, {COLOR_OK} 6%, {COLOR_BG}) !important;
+    border: 1px solid color-mix(in srgb, {COLOR_OK} 25%, {COLOR_BORDER}) !important;
+    border-left: 3px solid {COLOR_OK} !important; color: {COLOR_OK} !important;
 }}
+.st-key-corrective_actions button:hover {{ transform: translateY(-1px); }}
 
 /* Sidebar */
 [data-testid="stSidebar"] {{ background: {COLOR_PANEL} !important; border-right: 1px solid {COLOR_BORDER}; }}
-[data-testid="stSidebar"] img {{ border-radius: 6px; }}
+[data-testid="stSidebar"] img {{ border-radius: 8px; }}
 
 /* Captions */
-.stCaption, [data-testid="stCaptionContainer"] {{ color: {COLOR_MUTED} !important; font-family: 'IBM Plex Mono', monospace !important; font-weight: 600 !important; font-size: 14px !important; }}
+.stCaption, [data-testid="stCaptionContainer"] {{ color: {COLOR_MUTED} !important; font-family: 'Inter', sans-serif !important; font-weight: 500 !important; font-size: 13px !important; }}
 
 /* Checkbox label */
-.stCheckbox label p {{ color: {COLOR_TEXT} !important; font-size: 15px !important; }}
+.stCheckbox label p {{ color: {COLOR_TEXT} !important; font-size: 14px !important; }}
 
 /* Alert boxes */
-[data-testid="stAlert"] {{ background: {COLOR_PANEL} !important; border: 1px solid {COLOR_BORDER} !important; border-radius: 8px; }}
+[data-testid="stAlert"] {{ background: {COLOR_PANEL} !important; border: 1px solid {COLOR_BORDER} !important; border-radius: 10px; }}
 </style>
 """, unsafe_allow_html=True)
 
@@ -240,7 +245,6 @@ def kpi_card(container, icon, accent, label, value, delta_text=None, delta_posit
         delta_html = ""
     container.markdown(
         f"<div class='kpi-card' style='--accent:{accent};'>"
-        f"<div class='kpi-topbar'></div>"
         f"<div class='kpi-icon'>{icon}</div>"
         f"<div class='kpi-label'>{label}</div>"
         f"<div class='kpi-value'>{value}</div>"
@@ -309,8 +313,8 @@ def check_login():
         return True
 
     st.markdown(
-        f"<div style='color:{COLOR_GPS}; font-family:\"IBM Plex Mono\",monospace; font-size:12px; letter-spacing:2px;'>FLEET TELEMETRY RECONCILIATION</div>"
-        f"<h1 style='margin-top:2px;'>GPS vs MIS Dashboard</h1>",
+        "<div class='eyebrow'>Fleet Telemetry Reconciliation</div>"
+        "<h1 style='margin-top:2px;'>GPS vs MIS Dashboard</h1>",
         unsafe_allow_html=True,
     )
     st.markdown("#### Admin login")
@@ -515,10 +519,8 @@ def get_previous_entry(hist, current_key):
 # ---------------------------------------------------------------------------
 def render_brand_header():
     st.markdown(
-        f"<div style='color:{COLOR_GPS}; font-family:\"IBM Plex Mono\",monospace; font-size:12px; letter-spacing:2px;'>FLEET TELEMETRY RECONCILIATION</div>"
-        f"<h1 style='margin-top:2px; background:linear-gradient(90deg,{COLOR_GPS},{COLOR_MIS}) !important; "
-        f"-webkit-background-clip:text !important; -webkit-text-fill-color:transparent !important; background-clip:text !important; "
-        f"display:inline-block;'>GPS vs MIS Dashboard</h1>",
+        "<div class='eyebrow'>Fleet Telemetry Reconciliation</div>"
+        "<h1 style='margin-top:2px;'>GPS vs MIS Dashboard</h1>",
         unsafe_allow_html=True,
     )
 
@@ -684,7 +686,7 @@ def page_overview():
             hovertemplate="Day %{x}<br>MIS: %{y:,.0f} km<extra></extra>",
         ))
         fig.update_layout(
-            plot_bgcolor=CHART_BG, paper_bgcolor=CHART_BG, font_color=CHART_TEXT,
+            plot_bgcolor=CHART_BG, paper_bgcolor=CHART_BG, font=dict(family="Inter, sans-serif", color=CHART_TEXT),
             height=340, margin=dict(l=10, r=10, t=10, b=10),
             xaxis=dict(gridcolor=CHART_GRID, title="Day of month", tickfont=dict(size=13, color=CHART_TEXT), title_font=dict(size=13, color=CHART_TEXT), dtick=2),
             yaxis=dict(gridcolor=CHART_GRID, title="Km", tickfont=dict(size=13, color=CHART_TEXT), title_font=dict(size=13, color=CHART_TEXT), tickformat=",.0f", exponentformat="none", separatethousands=True),
@@ -733,17 +735,17 @@ def page_sites():
         fig.add_trace(go.Bar(
             y=data["Site"], x=data["Total_GPS"], name="GPS", orientation="h",
             marker_color=COLOR_GPS, text=data["Total_GPS"].apply(lambda v: f"{v:,.0f}"),
-            textposition="outside", textfont=dict(size=12, color=CHART_TEXT, family="IBM Plex Mono"),
+            textposition="outside", textfont=dict(size=12, color=CHART_TEXT, family="Inter, sans-serif"),
             hovertemplate="%{y}<br>GPS: %{x:,.0f} km<extra></extra>",
         ))
         fig.add_trace(go.Bar(
             y=data["Site"], x=data["Total_MIS"], name="MIS", orientation="h",
             marker_color=COLOR_MIS, text=data["Total_MIS"].apply(lambda v: f"{v:,.0f}"),
-            textposition="outside", textfont=dict(size=12, color=CHART_TEXT, family="IBM Plex Mono"),
+            textposition="outside", textfont=dict(size=12, color=CHART_TEXT, family="Inter, sans-serif"),
             hovertemplate="%{y}<br>MIS: %{x:,.0f} km<extra></extra>",
         ))
         fig.update_layout(
-            barmode="group", plot_bgcolor=CHART_BG, paper_bgcolor=CHART_BG, font_color=CHART_TEXT,
+            barmode="group", plot_bgcolor=CHART_BG, paper_bgcolor=CHART_BG, font=dict(family="Inter, sans-serif", color=CHART_TEXT),
             height=chart_height, margin=dict(l=10, r=50, t=10, b=30),
             xaxis=dict(gridcolor=CHART_GRID, title="Km", tickfont=dict(size=12, color=CHART_TEXT), title_font=dict(size=13, color=CHART_TEXT), tickformat=",.0f", exponentformat="none", separatethousands=True),
             yaxis=dict(tickfont=dict(size=13, family="Inter", color=CHART_TEXT), automargin=True),
@@ -765,7 +767,7 @@ def page_sites():
         marker_color=site_bar_colors, name="Diff %",
     ))
     fig_sites_diff.update_layout(
-        plot_bgcolor=CHART_BG, paper_bgcolor=CHART_BG, font_color=CHART_TEXT,
+        plot_bgcolor=CHART_BG, paper_bgcolor=CHART_BG, font=dict(family="Inter, sans-serif", color=CHART_TEXT),
         height=260, margin=dict(l=10, r=10, t=10, b=10),
         xaxis=dict(gridcolor=CHART_GRID, tickangle=-35, tickfont=dict(color=CHART_TEXT, size=13)), yaxis=dict(gridcolor=CHART_GRID, title="Diff %", tickfont=dict(color=CHART_TEXT, size=13), title_font=dict(size=13, color=CHART_TEXT)),
         showlegend=False,
@@ -925,7 +927,7 @@ def page_drilldown():
                 hovertemplate="Day %{x}<br>MIS: %{y:,.1f} km<extra></extra>",
             ))
             fig2.update_layout(
-                plot_bgcolor=CHART_BG, paper_bgcolor=CHART_BG, font_color=CHART_TEXT,
+                plot_bgcolor=CHART_BG, paper_bgcolor=CHART_BG, font=dict(family="Inter, sans-serif", color=CHART_TEXT),
                 height=340, margin=dict(l=10, r=10, t=10, b=10),
                 xaxis=dict(gridcolor=CHART_GRID, title="Day of month", tickfont=dict(size=13, color=CHART_TEXT), title_font=dict(size=13, color=CHART_TEXT), dtick=2),
                 yaxis=dict(gridcolor=CHART_GRID, title="Km", tickfont=dict(size=13, color=CHART_TEXT), title_font=dict(size=13, color=CHART_TEXT), tickformat=",.0f", exponentformat="none", separatethousands=True),
@@ -960,7 +962,7 @@ def page_history():
     fig3.add_trace(go.Scatter(x=hist_df["Month"], y=hist_df["Total GPS"], name="GPS", line=dict(color=COLOR_GPS, width=2), mode="lines+markers", hovertemplate="%{x}<br>GPS: %{y:,.0f} km<extra></extra>"))
     fig3.add_trace(go.Scatter(x=hist_df["Month"], y=hist_df["Total MIS"], name="MIS", line=dict(color=COLOR_MIS, width=2), mode="lines+markers", hovertemplate="%{x}<br>MIS: %{y:,.0f} km<extra></extra>"))
     fig3.update_layout(
-        plot_bgcolor=CHART_BG, paper_bgcolor=CHART_BG, font_color=CHART_TEXT,
+        plot_bgcolor=CHART_BG, paper_bgcolor=CHART_BG, font=dict(family="Inter, sans-serif", color=CHART_TEXT),
         height=300, margin=dict(l=10, r=10, t=10, b=10),
         xaxis=dict(gridcolor=CHART_GRID, tickfont=dict(size=13, color=CHART_TEXT)),
         yaxis=dict(gridcolor=CHART_GRID, tickfont=dict(size=13, color=CHART_TEXT), title="Km", title_font=dict(size=13, color=CHART_TEXT), tickformat=",.0f", exponentformat="none", separatethousands=True),
