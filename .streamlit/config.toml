@@ -1,7 +1,18 @@
 [theme]
 base = "light"
+font = "sans serif"
+
+[theme.light]
 primaryColor = "#0891B2"
 backgroundColor = "#FFFFFF"
 secondaryBackgroundColor = "#F7F9FC"
 textColor = "#0F172A"
-font = "sans serif"
+
+[theme.dark]
+primaryColor = "#00E5FF"
+backgroundColor = "#0A0E17"
+secondaryBackgroundColor = "#121a2c"
+textColor = "#F1F5FB"
+
+[client]
+toolbarMode = "viewer"

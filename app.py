@@ -31,24 +31,53 @@ from openpyxl import load_workbook
 st.set_page_config(page_title="GPS vs MIS Fleet Dashboard", layout="wide", page_icon="🚚", initial_sidebar_state="expanded")
 
 # ---------------------------------------------------------------------------
-# Theme (white, vibrant-accent style — clean light background, bold accents)
+# Theme — light and dark palettes. The active one follows Streamlit's own
+# Settings -> Theme toggle (top-right menu / "Use system setting"), read via
+# st.context.theme.type, so native widgets (dataframe grid, dropdowns) and
+# our custom CSS + charts always agree on which mode is active.
 # ---------------------------------------------------------------------------
-COLOR_BG = "#FFFFFF"
-COLOR_PANEL = "#F7F9FC"
-COLOR_BORDER = "#E2E8F0"
-COLOR_TEXT = "#0F172A"
-COLOR_MUTED = "#5B6B85"
-COLOR_GPS = "#0891B2"
-COLOR_MIS = "#EA580C"
-COLOR_OK = "#16A34A"
-COLOR_CRIT = "#DC2626"
-COLOR_WARN = "#B45309"
-COLOR_DIFF = "#7C3AED"
-COLOR_VEHICLES = "#4F46E5"
-COLOR_FLAGGED = "#DB2777"
-CHART_TEXT = "#0F172A"
-CHART_GRID = "#E2E8F0"
-CHART_BG = "#F7F9FC"
+LIGHT_THEME = {
+    "COLOR_BG": "#FFFFFF", "COLOR_PANEL": "#F7F9FC", "COLOR_BORDER": "#E2E8F0",
+    "COLOR_TEXT": "#0F172A", "COLOR_MUTED": "#5B6B85",
+    "COLOR_GPS": "#0891B2", "COLOR_MIS": "#EA580C", "COLOR_OK": "#16A34A",
+    "COLOR_CRIT": "#DC2626", "COLOR_WARN": "#B45309", "COLOR_DIFF": "#7C3AED",
+    "COLOR_VEHICLES": "#4F46E5", "COLOR_FLAGGED": "#DB2777",
+    "CHART_TEXT": "#0F172A", "CHART_GRID": "#E2E8F0", "CHART_BG": "#F7F9FC",
+}
+DARK_THEME = {
+    "COLOR_BG": "#0A0E17", "COLOR_PANEL": "#121a2c", "COLOR_BORDER": "#283a5c",
+    "COLOR_TEXT": "#F1F5FB", "COLOR_MUTED": "#93A5C4",
+    "COLOR_GPS": "#00E5FF", "COLOR_MIS": "#FF9F1C", "COLOR_OK": "#00E676",
+    "COLOR_CRIT": "#FF3B5C", "COLOR_WARN": "#FFC93C", "COLOR_DIFF": "#B14EFF",
+    "COLOR_VEHICLES": "#4C6FFF", "COLOR_FLAGGED": "#FF3D9A",
+    "CHART_TEXT": "#F5F7FA", "CHART_GRID": "#33456b", "CHART_BG": "#161f38",
+}
+
+_theme_type = getattr(st.context.theme, "type", None) or "light"
+_palette = DARK_THEME if _theme_type == "dark" else LIGHT_THEME
+_IS_DARK = _theme_type == "dark"
+
+COLOR_BG = _palette["COLOR_BG"]
+COLOR_PANEL = _palette["COLOR_PANEL"]
+COLOR_BORDER = _palette["COLOR_BORDER"]
+COLOR_TEXT = _palette["COLOR_TEXT"]
+COLOR_MUTED = _palette["COLOR_MUTED"]
+COLOR_GPS = _palette["COLOR_GPS"]
+COLOR_MIS = _palette["COLOR_MIS"]
+COLOR_OK = _palette["COLOR_OK"]
+COLOR_CRIT = _palette["COLOR_CRIT"]
+COLOR_WARN = _palette["COLOR_WARN"]
+COLOR_DIFF = _palette["COLOR_DIFF"]
+COLOR_VEHICLES = _palette["COLOR_VEHICLES"]
+COLOR_FLAGGED = _palette["COLOR_FLAGGED"]
+CHART_TEXT = _palette["CHART_TEXT"]
+CHART_GRID = _palette["CHART_GRID"]
+CHART_BG = _palette["CHART_BG"]
+
+# Neutral (non-colored) ambient shadow — a plain black shadow reads fine on
+# both a white and a near-black surface; only the alpha needs to differ.
+SHADOW_SM = "rgba(0,0,0,0.35)" if _IS_DARK else "rgba(15,23,42,0.04)"
+SHADOW_LG = "rgba(0,0,0,0.5)" if _IS_DARK else "rgba(15,23,42,0.06)"
 
 
 def hex_to_rgba(hex_color, alpha):
@@ -63,7 +92,6 @@ st.markdown(f"""
 
 html, body, [class*="css"] {{ font-family: 'Inter', sans-serif; font-size: 15px; }}
 .stApp {{ background: {COLOR_BG}; color: {COLOR_TEXT}; }}
-#MainMenu {{ visibility: hidden; }}
 footer {{ visibility: hidden; }}
 
 h1 {{ font-family: 'Space Grotesk', sans-serif !important; font-weight: 700 !important; color: {COLOR_TEXT} !important; font-size: 30px !important; }}
@@ -82,7 +110,7 @@ p, label, span, div {{ font-size: 15px; font-weight: 500; }}
     background: {COLOR_BG};
     border: 1px solid color-mix(in srgb, var(--accent) 28%, {COLOR_BORDER}); border-radius: 12px;
     padding: 18px 18px 16px; position: relative; overflow: hidden;
-    box-shadow: 0 1px 2px rgba(15,23,42,0.04),
+    box-shadow: 0 1px 2px {SHADOW_SM},
                 0 10px 22px color-mix(in srgb, var(--accent) 10%, transparent);
     transition: transform 0.15s ease, box-shadow 0.15s ease;
     display: flex; flex-direction: column; justify-content: flex-start;
@@ -90,7 +118,7 @@ p, label, span, div {{ font-size: 15px; font-weight: 500; }}
 }}
 .kpi-card:hover {{
     transform: translateY(-3px);
-    box-shadow: 0 4px 10px rgba(15,23,42,0.06),
+    box-shadow: 0 4px 10px {SHADOW_LG},
                 0 16px 30px color-mix(in srgb, var(--accent) 20%, transparent);
 }}
 .kpi-topbar {{
@@ -100,7 +128,8 @@ p, label, span, div {{ font-size: 15px; font-weight: 500; }}
 .kpi-icon {{
     width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center;
     justify-content: center; font-size: 18px; margin-bottom: 14px; color: var(--accent);
-    background: color-mix(in srgb, var(--accent) 14%, white);
+    background: color-mix(in srgb, var(--accent) 20%, transparent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 20%, transparent);
 }}
 .kpi-label {{ color: {COLOR_MUTED}; font-size: 13px; letter-spacing: 0.6px; text-transform: uppercase; font-weight: 700; margin-bottom: 4px; }}
 .kpi-value {{ color: {COLOR_TEXT}; font-family: 'IBM Plex Mono', monospace; font-size: 22px; font-weight: 700; margin-bottom: 8px; white-space: nowrap; }}
@@ -114,7 +143,7 @@ p, label, span, div {{ font-size: 15px; font-weight: 500; }}
 /* Native bordered containers (used to box charts) */
 [data-testid="stVerticalBlockBorderWrapper"] {{
     border-radius: 14px !important;
-    box-shadow: 0 1px 2px rgba(15,23,42,0.04), 0 8px 20px rgba(15,23,42,0.06);
+    box-shadow: 0 1px 2px {SHADOW_SM}, 0 8px 20px {SHADOW_LG};
 }}
 [data-testid="stVerticalBlockBorderWrapper"] > div {{
     border-color: {COLOR_BORDER} !important;
@@ -160,7 +189,7 @@ p, label, span, div {{ font-size: 15px; font-weight: 500; }}
 .st-key-corrective_actions button {{
     white-space: pre-line !important; line-height: 1.3 !important; min-height: 54px !important;
     font-family: 'IBM Plex Mono', monospace !important; font-size: 13px !important; font-weight: 700 !important;
-    box-shadow: 0 2px 8px rgba(15,23,42,0.12);
+    box-shadow: 0 2px 8px {SHADOW_LG};
 }}
 
 /* Corrective-action buttons colored by severity */
@@ -324,6 +353,11 @@ with st.sidebar:
     if st.button("Log out"):
         st.session_state.authenticated = False
         st.rerun()
+
+    st.caption(
+        "🎨 Light / Dark mode: use the **⋮ menu (top right)** → choose **Light** or **Dark**. "
+        "Refresh the page once afterward so every panel picks up the new theme."
+    )
 
     with st.expander("🔑 Change password"):
         if using_cloud_secrets():
