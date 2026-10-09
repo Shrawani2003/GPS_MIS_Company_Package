@@ -457,19 +457,20 @@ PLOTLY_CONFIG = {"displayModeBar": False}
 
 
 # ---------------------------------------------------------------------------
-# Light / dark toggle — a small sun / moon tile pinned top-right, next to the
-# ⋮ menu. Streamlit has no Python API to change the viewer's theme, so the
+# Light / dark toggle — a small sun / moon tile in the sidebar's top row,
+# beside the collapse arrow. Streamlit has no Python API to change the viewer's theme, so the
 # click runs a tiny script that picks Light/Dark in Streamlit's own ⋮ menu
 # (which also remembers the choice in the browser) and then presses a hidden
 # button to rerun the app, so our cards and charts redraw in the new palette.
 # ---------------------------------------------------------------------------
 st.markdown(f"""
 <style>
+[data-testid="stSidebarContent"] {{ position: relative; }}
 .st-key-theme_toggle {{
-    position: fixed; top: 0.6rem; right: 3.6rem; z-index: 999991; width: auto !important;
+    position: absolute; top: 0.85rem; left: 1.4rem; z-index: 999991; width: auto !important;
 }}
 .st-key-theme_toggle button {{
-    width: 40px !important; height: 40px !important; min-height: 40px !important; padding: 0 !important;
+    width: 36px !important; height: 36px !important; min-height: 36px !important; padding: 0 !important;
     border-radius: 11px !important; font-size: 19px !important; line-height: 1 !important;
     background: {"#1C2740" if _IS_DARK else "#EEF0F7"} !important;
     border: 1px solid {COLOR_BORDER} !important; box-shadow: 0 1px 2px {SHADOW_SM} !important;
@@ -484,7 +485,7 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 _target_theme = "Light" if _IS_DARK else "Dark"
-with st.container(key="theme_toggle"):
+with st.sidebar, st.container(key="theme_toggle"):
     _toggle_clicked = st.button(
         "☀️" if _IS_DARK else "🌙", key="theme_toggle_btn",
         help=f"Switch to {_target_theme.lower()} mode",
@@ -646,9 +647,9 @@ _logo_css = ""
 if LOGO_PATH.exists():
     _logo_b64 = base64.b64encode(LOGO_PATH.read_bytes()).decode()
     _logo_css = (
-        f"background: #FFFFFF url('data:image/png;base64,{_logo_b64}') no-repeat center 10px / auto 116px;"
-        "padding-top: 138px !important; border-radius: 14px; border: 1px solid rgba(128,128,128,0.18);"
-        "padding-bottom: 14px !important; color: #0F172A !important;"
+        f"background: #FFFFFF url('data:image/png;base64,{_logo_b64}') no-repeat center 10px / auto 80px;"
+        "padding-top: 96px !important; border-radius: 12px; border: 1px solid rgba(128,128,128,0.18);"
+        "padding-bottom: 10px !important; color: #0F172A !important;"
     )
 st.markdown(
     f"""<style>
@@ -656,11 +657,11 @@ st.markdown(
         content: "{_company_css}";
         display: block;
         text-align: center;
-        font-size: 1.15rem;
+        font-size: 0.95rem;
         font-weight: 700;
         line-height: 1.3;
-        padding: 0 0.5rem 1rem;
-        margin-bottom: 1rem;
+        padding: 0 0.6rem 0.8rem;
+        margin-bottom: 0.8rem;
         {_logo_css}
     }}
     </style>""",
