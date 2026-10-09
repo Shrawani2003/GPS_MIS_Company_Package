@@ -35,22 +35,26 @@ st.set_page_config(page_title="GPS vs MIS Fleet Dashboard", layout="wide", page_
 # Settings -> Theme toggle (top-right menu / "Use system setting"), read via
 # st.context.theme.type, so native widgets (dataframe grid, dropdowns) and
 # our custom CSS + charts always agree on which mode is active.
+#
+# GPS / MIS series colours are a colour-blind-safe blue/orange pair; status
+# colours (ok / watch / warn / critical) are kept separate from the series
+# colours and always appear with a text label, never colour alone.
 # ---------------------------------------------------------------------------
 LIGHT_THEME = {
-    "COLOR_BG": "#FFFFFF", "COLOR_PANEL": "#F7F9FC", "COLOR_BORDER": "#E2E8F0",
-    "COLOR_TEXT": "#0F172A", "COLOR_MUTED": "#5B6B85",
-    "COLOR_GPS": "#0891B2", "COLOR_MIS": "#EA580C", "COLOR_OK": "#16A34A",
-    "COLOR_CRIT": "#DC2626", "COLOR_WARN": "#B45309", "COLOR_DIFF": "#7C3AED",
-    "COLOR_VEHICLES": "#4F46E5", "COLOR_FLAGGED": "#DB2777",
-    "CHART_TEXT": "#0F172A", "CHART_GRID": "#E2E8F0", "CHART_BG": "#F7F9FC",
+    "COLOR_BG": "#F4F6FA", "COLOR_CARD": "#FFFFFF", "COLOR_PANEL": "#FFFFFF", "COLOR_BORDER": "#E3E8EF",
+    "COLOR_TEXT": "#0F172A", "COLOR_MUTED": "#64748B",
+    "COLOR_GPS": "#2A78D6", "COLOR_MIS": "#EB6834", "COLOR_OK": "#15803D",
+    "COLOR_CRIT": "#D03B3B", "COLOR_WARN": "#B45309", "COLOR_DIFF": "#6D28D9",
+    "COLOR_VEHICLES": "#1E40AF", "COLOR_FLAGGED": "#D03B3B",
+    "CHART_TEXT": "#475569", "CHART_GRID": "#EEF1F5", "CHART_AXIS": "#CBD5E1",
 }
 DARK_THEME = {
-    "COLOR_BG": "#0A0E17", "COLOR_PANEL": "#121a2c", "COLOR_BORDER": "#283a5c",
-    "COLOR_TEXT": "#F1F5FB", "COLOR_MUTED": "#93A5C4",
-    "COLOR_GPS": "#00E5FF", "COLOR_MIS": "#FF9F1C", "COLOR_OK": "#00E676",
-    "COLOR_CRIT": "#FF3B5C", "COLOR_WARN": "#FFC93C", "COLOR_DIFF": "#B14EFF",
-    "COLOR_VEHICLES": "#4C6FFF", "COLOR_FLAGGED": "#FF3D9A",
-    "CHART_TEXT": "#F5F7FA", "CHART_GRID": "#33456b", "CHART_BG": "#161f38",
+    "COLOR_BG": "#0B1120", "COLOR_CARD": "#121A2B", "COLOR_PANEL": "#0F1626", "COLOR_BORDER": "#223049",
+    "COLOR_TEXT": "#F1F5F9", "COLOR_MUTED": "#94A3B8",
+    "COLOR_GPS": "#3987E5", "COLOR_MIS": "#D95926", "COLOR_OK": "#22C55E",
+    "COLOR_CRIT": "#E66767", "COLOR_WARN": "#FAB219", "COLOR_DIFF": "#A78BFA",
+    "COLOR_VEHICLES": "#6E8BFF", "COLOR_FLAGGED": "#E66767",
+    "CHART_TEXT": "#A8B3C7", "CHART_GRID": "#1C2740", "CHART_AXIS": "#334155",
 }
 
 _theme_type = getattr(st.context.theme, "type", None) or "light"
@@ -58,6 +62,7 @@ _palette = DARK_THEME if _theme_type == "dark" else LIGHT_THEME
 _IS_DARK = _theme_type == "dark"
 
 COLOR_BG = _palette["COLOR_BG"]
+COLOR_CARD = _palette["COLOR_CARD"]
 COLOR_PANEL = _palette["COLOR_PANEL"]
 COLOR_BORDER = _palette["COLOR_BORDER"]
 COLOR_TEXT = _palette["COLOR_TEXT"]
@@ -72,12 +77,20 @@ COLOR_VEHICLES = _palette["COLOR_VEHICLES"]
 COLOR_FLAGGED = _palette["COLOR_FLAGGED"]
 CHART_TEXT = _palette["CHART_TEXT"]
 CHART_GRID = _palette["CHART_GRID"]
-CHART_BG = _palette["CHART_BG"]
+CHART_AXIS = _palette["CHART_AXIS"]
+CHART_BG = COLOR_CARD
+
+# Status fills used for chart marks (bars, donut slices). Fixed across themes.
+STATUS_FILL = {"critical": "#D03B3B", "warn": "#EC835A", "watch": "#F2A818", "ok": "#0CA30C"}
+STATUS_LABEL = {"critical": "Critical", "warn": "Needs check", "watch": "Watch", "ok": "OK"}
+
+# Brand band behind the page header — deep corporate navy in both themes.
+BRAND_GRADIENT = "linear-gradient(120deg, #0B1F4B 0%, #13317A 55%, #1D4ED8 100%)"
 
 # Neutral (non-colored) ambient shadow — a plain black shadow reads fine on
 # both a white and a near-black surface; only the alpha needs to differ.
-SHADOW_SM = "rgba(0,0,0,0.35)" if _IS_DARK else "rgba(15,23,42,0.04)"
-SHADOW_LG = "rgba(0,0,0,0.5)" if _IS_DARK else "rgba(15,23,42,0.06)"
+SHADOW_SM = "rgba(0,0,0,0.35)" if _IS_DARK else "rgba(15,23,42,0.05)"
+SHADOW_LG = "rgba(0,0,0,0.45)" if _IS_DARK else "rgba(15,23,42,0.07)"
 
 
 def hex_to_rgba(hex_color, alpha):
@@ -88,21 +101,121 @@ def hex_to_rgba(hex_color, alpha):
 
 st.markdown(f"""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
-html, body, [class*="css"] {{ font-family: 'Inter', sans-serif; font-size: 15px; line-height: 1.55; }}
+html, body, [class*="css"] {{ font-family: 'Inter', system-ui, 'Segoe UI', sans-serif; font-size: 15px; line-height: 1.55; }}
 .stApp {{ background: {COLOR_BG}; color: {COLOR_TEXT}; }}
 footer {{ visibility: hidden; }}
+.block-container {{ padding-top: 2.2rem !important; max-width: 1480px; }}
 
-h1 {{ font-family: 'Space Grotesk', sans-serif !important; font-weight: 700 !important; color: {COLOR_TEXT} !important; font-size: 32px !important; letter-spacing: -0.5px; }}
-h2, h3 {{ font-family: 'Space Grotesk', sans-serif !important; font-weight: 600 !important; color: {COLOR_TEXT} !important; font-size: 20px !important; letter-spacing: -0.2px; margin-top: 8px !important; }}
-h4 {{ font-family: 'Space Grotesk', sans-serif !important; font-weight: 600 !important; color: {COLOR_TEXT} !important; font-size: 16px !important; }}
+h1, h2, h3, h4 {{ font-family: 'Inter', system-ui, sans-serif !important; color: {COLOR_TEXT} !important; }}
+h1 {{ font-weight: 700 !important; font-size: 30px !important; letter-spacing: -0.5px; }}
+h2, h3 {{ font-weight: 650 !important; font-size: 19px !important; letter-spacing: -0.2px; margin-top: 10px !important; }}
+h4 {{ font-weight: 600 !important; font-size: 16px !important; }}
 p, label, span, div {{ font-size: 15px; font-weight: 400; }}
 
 .eyebrow {{
-    color: {COLOR_MUTED}; font-family: 'Inter', sans-serif; font-weight: 700; font-size: 12px;
+    color: {COLOR_MUTED}; font-weight: 700; font-size: 12px;
     letter-spacing: 1.6px; text-transform: uppercase; margin-bottom: 4px;
 }}
+
+/* ---------- Brand header band ---------- */
+.brand-hero {{
+    background: {BRAND_GRADIENT}; border-radius: 18px; padding: 26px 30px;
+    display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; flex-wrap: wrap;
+    position: relative; overflow: hidden; margin-bottom: 22px;
+    box-shadow: 0 10px 30px rgba(11,31,75,0.25);
+}}
+.brand-hero::after {{
+    content: ""; position: absolute; right: -60px; top: -80px; width: 280px; height: 280px;
+    border-radius: 50%; background: radial-gradient(circle, rgba(255,255,255,0.14), rgba(255,255,255,0) 70%);
+}}
+.brand-hero .hero-eyebrow {{ color: rgba(255,255,255,0.72) !important; font-size: 12px !important; font-weight: 700 !important; letter-spacing: 1.6px; text-transform: uppercase; }}
+.brand-hero .hero-title {{ color: #FFFFFF !important; font-size: 28px !important; font-weight: 750 !important; letter-spacing: -0.5px; line-height: 1.2; margin-top: 4px; }}
+.brand-hero .hero-sub {{ color: rgba(255,255,255,0.78) !important; font-size: 14px !important; margin-top: 6px; }}
+.brand-hero .hero-chips {{ display: flex; gap: 8px; flex-wrap: wrap; position: relative; z-index: 1; }}
+.brand-hero .hero-chip {{
+    display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: 999px;
+    background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.22);
+    color: #FFFFFF !important; font-size: 13px !important; font-weight: 600 !important; white-space: nowrap;
+}}
+.brand-hero .hero-chip svg {{ width: 15px; height: 15px; }}
+
+/* ---------- KPI cards ---------- */
+.kpi-card {{
+    background: {COLOR_CARD};
+    border: 1px solid {COLOR_BORDER}; border-radius: 16px;
+    padding: 18px 20px 16px; position: relative; overflow: hidden;
+    box-shadow: 0 1px 2px {SHADOW_SM}, 0 8px 24px {SHADOW_LG};
+    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+    display: flex; flex-direction: column; min-height: 220px; box-sizing: border-box;
+}}
+.kpi-card::before {{
+    content: ""; position: absolute; left: 0; right: 0; top: 0; height: 3px; background: var(--accent);
+}}
+.kpi-card:hover {{
+    transform: translateY(-2px);
+    border-color: color-mix(in srgb, var(--accent) 40%, {COLOR_BORDER});
+    box-shadow: 0 2px 4px {SHADOW_SM}, 0 14px 30px {SHADOW_LG};
+}}
+.kpi-card .kpi-head {{ display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 12px; }}
+.kpi-card .kpi-label {{ color: {COLOR_MUTED} !important; font-size: 12px !important; letter-spacing: 0.6px; text-transform: uppercase; font-weight: 650 !important; }}
+.kpi-card .kpi-icon {{
+    width: 34px; height: 34px; border-radius: 10px; flex: none;
+    display: flex; align-items: center; justify-content: center; color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+}}
+.kpi-card .kpi-icon svg {{ width: 18px; height: 18px; }}
+.kpi-card .kpi-value {{
+    color: {COLOR_TEXT} !important; font-size: clamp(22px, 1.9vw, 30px) !important; font-weight: 750 !important;
+    letter-spacing: -0.6px; line-height: 1.1; white-space: nowrap; margin-bottom: 10px;
+}}
+.kpi-card .kpi-unit {{ color: {COLOR_MUTED} !important; font-size: 13px !important; font-weight: 600 !important; margin-left: 5px; letter-spacing: 0; }}
+.kpi-card .kpi-foot {{ display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }}
+.kpi-card .kpi-delta {{
+    display: inline-flex; align-items: center; gap: 3px; font-size: 12px !important; font-weight: 650 !important;
+    padding: 3px 8px; border-radius: 999px; white-space: nowrap;
+}}
+.kpi-card .kpi-vs {{ color: {COLOR_MUTED} !important; font-size: 12px !important; font-weight: 500 !important; white-space: nowrap; }}
+.kpi-card .kpi-spark {{ margin-top: auto; padding-top: 12px; }}
+.kpi-card .kpi-spark svg {{ width: 100%; height: 34px; display: block; }}
+.kpi-card .kpi-meter {{ margin-top: auto; padding-top: 14px; }}
+.kpi-card .kpi-meter-track {{ height: 6px; border-radius: 999px; background: color-mix(in srgb, var(--accent) 14%, transparent); overflow: hidden; }}
+.kpi-card .kpi-meter-fill {{ height: 100%; border-radius: 999px; background: var(--accent); }}
+
+/* ---------- Chart cards ---------- */
+.card-title {{ color: {COLOR_TEXT} !important; font-size: 16px !important; font-weight: 650 !important; letter-spacing: -0.2px; }}
+.card-sub {{ color: {COLOR_MUTED} !important; font-size: 13px !important; margin-top: 2px; margin-bottom: 4px; }}
+.legend-row {{ display: flex; gap: 16px; flex-wrap: wrap; margin-top: 6px; }}
+.legend-item {{ display: inline-flex; align-items: center; gap: 6px; color: {COLOR_MUTED} !important; font-size: 12.5px !important; font-weight: 500 !important; }}
+.legend-swatch {{ width: 10px; height: 10px; border-radius: 3px; display: inline-block; }}
+
+.action-card {{
+    background: {COLOR_CARD}; border: 1px solid {COLOR_BORDER}; border-radius: 12px;
+    padding: 14px 18px; margin-bottom: 10px; box-shadow: 0 1px 2px {SHADOW_SM};
+}}
+
+/* Chart cards — bordered st.container(key="card_...") boxes */
+[class*="st-key-card_"] {{
+    background: {COLOR_CARD} !important; border: 1px solid {COLOR_BORDER} !important;
+    border-radius: 16px !important; padding: 20px 20px 12px !important;
+    box-shadow: 0 1px 2px {SHADOW_SM}, 0 8px 24px {SHADOW_LG};
+}}
+
+/* Dataframe / tables */
+.stDataFrame, [data-testid="stDataFrame"] {{
+    border: 1px solid {COLOR_BORDER} !important; border-radius: 12px !important; overflow: hidden;
+    box-shadow: 0 1px 2px {SHADOW_SM};
+}}
+
+/* Inputs */
+.stTextInput input, .stSelectbox [data-baseweb="select"] > div, .stTextInput > div > div {{
+    background: {COLOR_CARD} !important; border: 1px solid {COLOR_BORDER} !important;
+    color: {COLOR_TEXT} !important; border-radius: 8px !important; font-size: 14px !important;
+}}
+.stSlider [data-baseweb="slider"] {{ padding-top: 6px; }}
+.stSlider [role="slider"] {{ background: {COLOR_VEHICLES} !important; box-shadow: 0 0 0 5px {hex_to_rgba(COLOR_VEHICLES, 0.15)} !important; }}
+.stSlider div[data-baseweb="slider"] > div > div {{ background: {COLOR_VEHICLES} !important; }}
 
 /* Widget labels (Viewing, Flag threshold, Search, etc.) */
 [data-testid="stWidgetLabel"] p, [data-testid="stWidgetLabel"] label {{
@@ -110,63 +223,9 @@ p, label, span, div {{ font-size: 15px; font-weight: 400; }}
 }}
 [data-testid="stMarkdownContainer"] p {{ font-weight: 400; color: {COLOR_TEXT}; }}
 
-/* Custom KPI cards */
-.kpi-card {{
-    background: {COLOR_BG};
-    border: 1px solid {COLOR_BORDER}; border-radius: 16px;
-    padding: 22px 22px 20px; position: relative; overflow: hidden;
-    box-shadow: 0 1px 2px {SHADOW_SM}, 0 6px 16px {SHADOW_LG};
-    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
-    display: flex; flex-direction: column; justify-content: flex-start;
-    min-height: 200px; box-sizing: border-box;
-}}
-.kpi-card:hover {{
-    transform: translateY(-2px);
-    border-color: color-mix(in srgb, var(--accent) 45%, {COLOR_BORDER});
-    box-shadow: 0 2px 4px {SHADOW_SM}, 0 12px 24px {SHADOW_LG};
-}}
-.kpi-icon {{
-    width: 42px; height: 42px; border-radius: 11px; display: flex; align-items: center;
-    justify-content: center; font-size: 19px; margin-bottom: 16px; color: var(--accent);
-    background: color-mix(in srgb, var(--accent) 13%, transparent);
-}}
-.kpi-label {{ color: {COLOR_MUTED}; font-size: 12px; letter-spacing: 0.7px; text-transform: uppercase; font-weight: 600; margin-bottom: 6px; }}
-.kpi-value {{ color: {COLOR_TEXT}; font-family: 'Inter', sans-serif; font-variant-numeric: tabular-nums; font-size: 22px; font-weight: 700; margin-bottom: 10px; white-space: nowrap; letter-spacing: -0.3px; }}
-.kpi-delta {{ display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 20px; font-variant-numeric: tabular-nums; }}
-
-.action-card {{
-    background: {COLOR_PANEL}; border: 1px solid {COLOR_BORDER}; border-radius: 10px;
-    padding: 12px 16px; margin-bottom: 6px;
-}}
-
-/* Native bordered containers (used to box charts) */
-[data-testid="stVerticalBlockBorderWrapper"] {{
-    border-radius: 16px !important;
-    box-shadow: 0 1px 2px {SHADOW_SM}, 0 6px 16px {SHADOW_LG};
-}}
-[data-testid="stVerticalBlockBorderWrapper"] > div {{
-    border-color: {COLOR_BORDER} !important;
-    background: {CHART_BG} !important;
-    border-radius: 16px !important;
-}}
-
-/* Dataframe / tables */
-.stDataFrame, [data-testid="stDataFrame"] {{
-    border: 1px solid {COLOR_BORDER} !important; border-radius: 12px !important; overflow: hidden;
-}}
-
-/* Inputs */
-.stTextInput input, .stSelectbox [data-baseweb="select"] > div, .stTextInput > div > div {{
-    background: {COLOR_BG} !important; border: 1px solid {COLOR_BORDER} !important;
-    color: {COLOR_TEXT} !important; border-radius: 8px !important; font-size: 14px !important;
-}}
-.stSlider [data-baseweb="slider"] {{ padding-top: 6px; }}
-.stSlider [role="slider"] {{ background: {COLOR_VEHICLES} !important; box-shadow: 0 0 0 5px {hex_to_rgba(COLOR_VEHICLES, 0.15)} !important; }}
-.stSlider div[data-baseweb="slider"] > div > div {{ background: {COLOR_VEHICLES} !important; }}
-
 /* File uploader */
 [data-testid="stFileUploaderDropzone"] {{
-    background: {COLOR_PANEL} !important;
+    background: {COLOR_BG} !important;
     border: 1.5px dashed {COLOR_BORDER} !important; border-radius: 12px !important;
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }}
@@ -184,75 +243,179 @@ p, label, span, div {{ font-size: 15px; font-weight: 400; }}
     transform: translateY(-1px); box-shadow: 0 4px 10px {SHADOW_LG};
 }}
 
+.stButton button p, .stFormSubmitButton button p {{ color: #FFFFFF !important; font-weight: 600 !important; font-size: 14px !important; }}
+
 /* Corrective-action tiles — soft status cards, not solid buttons */
 .st-key-corrective_actions button {{
-    white-space: pre-line !important; line-height: 1.35 !important; min-height: 58px !important;
-    font-family: 'Inter', sans-serif !important; font-size: 13px !important; font-weight: 600 !important;
+    white-space: pre-line !important; line-height: 1.35 !important; min-height: 64px !important;
+    font-size: 13px !important; font-weight: 600 !important;
     border-radius: 12px !important; text-align: left !important;
     box-shadow: 0 1px 2px {SHADOW_SM} !important;
 }}
 
 /* Corrective-action tiles colored by severity */
 [class*="st-key-actsev_critical"] button {{
-    background: color-mix(in srgb, {COLOR_CRIT} 8%, {COLOR_BG}) !important;
-    border: 1px solid color-mix(in srgb, {COLOR_CRIT} 30%, {COLOR_BORDER}) !important;
-    border-left: 3px solid {COLOR_CRIT} !important; color: {COLOR_CRIT} !important;
+    background: color-mix(in srgb, {COLOR_CRIT} 7%, {COLOR_CARD}) !important;
+    border: 1px solid color-mix(in srgb, {COLOR_CRIT} 28%, {COLOR_BORDER}) !important;
+    border-left: 4px solid {COLOR_CRIT} !important; color: {COLOR_CRIT} !important;
 }}
 [class*="st-key-actsev_warn"] button {{
-    background: color-mix(in srgb, {COLOR_WARN} 8%, {COLOR_BG}) !important;
-    border: 1px solid color-mix(in srgb, {COLOR_WARN} 30%, {COLOR_BORDER}) !important;
-    border-left: 3px solid {COLOR_WARN} !important; color: {COLOR_WARN} !important;
+    background: color-mix(in srgb, {COLOR_WARN} 7%, {COLOR_CARD}) !important;
+    border: 1px solid color-mix(in srgb, {COLOR_WARN} 28%, {COLOR_BORDER}) !important;
+    border-left: 4px solid {COLOR_WARN} !important; color: {COLOR_WARN} !important;
 }}
 [class*="st-key-actsev_watch"] button {{
-    background: color-mix(in srgb, {COLOR_WARN} 5%, {COLOR_BG}) !important;
-    border: 1px solid color-mix(in srgb, {COLOR_WARN} 20%, {COLOR_BORDER}) !important;
-    border-left: 3px solid color-mix(in srgb, {COLOR_WARN} 55%, {COLOR_BORDER}) !important; color: {COLOR_WARN} !important;
+    background: color-mix(in srgb, {COLOR_WARN} 4%, {COLOR_CARD}) !important;
+    border: 1px solid color-mix(in srgb, {COLOR_WARN} 18%, {COLOR_BORDER}) !important;
+    border-left: 4px solid color-mix(in srgb, {COLOR_WARN} 55%, {COLOR_BORDER}) !important; color: {COLOR_WARN} !important;
 }}
 [class*="st-key-actsev_ok"] button {{
-    background: color-mix(in srgb, {COLOR_OK} 6%, {COLOR_BG}) !important;
+    background: color-mix(in srgb, {COLOR_OK} 6%, {COLOR_CARD}) !important;
     border: 1px solid color-mix(in srgb, {COLOR_OK} 25%, {COLOR_BORDER}) !important;
-    border-left: 3px solid {COLOR_OK} !important; color: {COLOR_OK} !important;
+    border-left: 4px solid {COLOR_OK} !important; color: {COLOR_OK} !important;
 }}
 .st-key-corrective_actions button:hover {{ transform: translateY(-1px); }}
+.st-key-corrective_actions button p {{ color: inherit !important; font-size: 13px !important; text-align: left !important; }}
 
 /* Sidebar */
 [data-testid="stSidebar"] {{ background: {COLOR_PANEL} !important; border-right: 1px solid {COLOR_BORDER}; }}
 [data-testid="stSidebar"] img {{ border-radius: 8px; }}
 
 /* Captions */
-.stCaption, [data-testid="stCaptionContainer"] {{ color: {COLOR_MUTED} !important; font-family: 'Inter', sans-serif !important; font-weight: 500 !important; font-size: 13px !important; }}
+.stCaption, [data-testid="stCaptionContainer"] {{ color: {COLOR_MUTED} !important; font-weight: 500 !important; font-size: 13px !important; }}
 
 /* Checkbox label */
 .stCheckbox label p {{ color: {COLOR_TEXT} !important; font-size: 14px !important; }}
 
 /* Alert boxes */
-[data-testid="stAlert"] {{ background: {COLOR_PANEL} !important; border: 1px solid {COLOR_BORDER} !important; border-radius: 10px; }}
+[data-testid="stAlert"] {{ background: {COLOR_CARD} !important; border: 1px solid {COLOR_BORDER} !important; border-radius: 10px; }}
 </style>
 """, unsafe_allow_html=True)
 
 ACTION_COLORS = {"critical": COLOR_CRIT, "warn": COLOR_WARN, "watch": COLOR_WARN, "ok": COLOR_OK}
 
 
-def kpi_card(container, icon, accent, label, value, delta_text=None, delta_positive=None, neutral=False):
-    if delta_text and neutral:
-        delta_html = f"<span class='kpi-delta' style='background:{COLOR_BORDER}; color:{COLOR_MUTED};'>{delta_text}</span>"
-    elif delta_text:
-        d_bg = hex_to_rgba(COLOR_OK, 0.16) if delta_positive else hex_to_rgba(COLOR_CRIT, 0.16)
-        d_color = COLOR_OK if delta_positive else COLOR_CRIT
-        arrow = "▲" if delta_positive else "▼"
-        delta_html = f"<span class='kpi-delta' style='background:{d_bg}; color:{d_color};'>{arrow} {delta_text}</span>"
+# Inline line icons (stroke = currentColor) — crisper and more corporate than emoji.
+_ICON_PATHS = {
+    "gps": '<polygon points="3 11 22 2 13 21 11 13 3 11"/>',
+    "mis": '<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M9 12h6"/><path d="M9 16h4"/>',
+    "diff": '<path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/>',
+    "truck": '<path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.62l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/>',
+    "flag": '<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/>',
+    "calendar": '<rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/>',
+    "sliders": '<line x1="4" x2="20" y1="7" y2="7"/><line x1="4" x2="20" y1="17" y2="17"/><circle cx="9" cy="7" r="2.5"/><circle cx="15" cy="17" r="2.5"/>',
+    "building": '<rect width="16" height="20" x="4" y="2" rx="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01M16 6h.01M12 6h.01M12 10h.01M12 14h.01M16 10h.01M16 14h.01M8 10h.01M8 14h.01"/>',
+}
+
+
+def icon_svg(name):
+    return (
+        "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' "
+        f"stroke-linecap='round' stroke-linejoin='round'>{_ICON_PATHS[name]}</svg>"
+    )
+
+
+def sparkline_svg(values, color):
+    """Small trend line for a KPI card: area wash + 2px line + end dot on the latest value."""
+    vals = [float(v) for v in values]
+    if len(vals) < 2:
+        return ""
+    w, h, pad = 200, 34, 4
+    lo, hi = min(vals), max(vals)
+    span = (hi - lo) or 1.0
+    step = (w - 2 * pad) / (len(vals) - 1)
+    pts = [(pad + i * step, pad + (h - 2 * pad) * (1 - (v - lo) / span)) for i, v in enumerate(vals)]
+    line = " ".join(f"{x:.1f},{y:.1f}" for x, y in pts)
+    area = f"{pts[0][0]:.1f},{h} {line} {pts[-1][0]:.1f},{h}"
+    ex, ey = pts[-1]
+    return (
+        f"<svg viewBox='0 0 {w} {h}' preserveAspectRatio='none'>"
+        f"<polygon points='{area}' fill='{color}' fill-opacity='0.10'/>"
+        f"<polyline points='{line}' fill='none' stroke='{color}' stroke-width='2' "
+        f"stroke-linejoin='round' stroke-linecap='round' vector-effect='non-scaling-stroke'/>"
+        f"<circle cx='{ex:.1f}' cy='{ey:.1f}' r='3.5' fill='{color}' stroke='{COLOR_CARD}' stroke-width='2' "
+        f"vector-effect='non-scaling-stroke'/>"
+        f"</svg>"
+    )
+
+
+def kpi_card(container, icon, accent, label, value, unit=None, delta_text=None, delta_tone=None,
+             vs_text=None, spark=None, meter=None):
+    """Stat tile. delta_tone: 'good' | 'bad' | 'neutral'. spark: list of values. meter: 0..1 fill."""
+    if delta_text:
+        tone_color = {"good": COLOR_OK, "bad": COLOR_CRIT}.get(delta_tone, COLOR_MUTED)
+        tone_bg = hex_to_rgba(tone_color, 0.12) if delta_tone in ("good", "bad") else hex_to_rgba(COLOR_MUTED, 0.12)
+        delta_html = f"<span class='kpi-delta' style='background:{tone_bg}; color:{tone_color};'>{delta_text}</span>"
     else:
         delta_html = ""
+    vs_html = f"<span class='kpi-vs'>{vs_text}</span>" if vs_text else ""
+    foot_html = f"<div class='kpi-foot'>{delta_html}{vs_html}</div>" if (delta_html or vs_html) else ""
+    unit_html = f"<span class='kpi-unit'>{unit}</span>" if unit else ""
+    extra_html = ""
+    if spark:
+        extra_html = f"<div class='kpi-spark'>{sparkline_svg(spark, accent)}</div>"
+    elif meter is not None:
+        pct = max(0.0, min(1.0, float(meter))) * 100
+        extra_html = (
+            f"<div class='kpi-meter'><div class='kpi-meter-track'>"
+            f"<div class='kpi-meter-fill' style='width:{pct:.1f}%;'></div></div></div>"
+        )
     container.markdown(
         f"<div class='kpi-card' style='--accent:{accent};'>"
-        f"<div class='kpi-icon'>{icon}</div>"
-        f"<div class='kpi-label'>{label}</div>"
-        f"<div class='kpi-value'>{value}</div>"
-        f"{delta_html}"
+        f"<div class='kpi-head'><span class='kpi-label'>{label}</span>"
+        f"<span class='kpi-icon'>{icon_svg(icon)}</span></div>"
+        f"<div class='kpi-value'>{value}{unit_html}</div>"
+        f"{foot_html}{extra_html}"
         f"</div>",
         unsafe_allow_html=True,
     )
 
+
+def card_header(title, subtitle=None, legend=None):
+    """Title row printed at the top of a bordered chart container. legend: [(label, color), ...]."""
+    html = f"<div class='card-title'>{title}</div>"
+    if subtitle:
+        html += f"<div class='card-sub'>{subtitle}</div>"
+    if legend:
+        items = "".join(
+            f"<span class='legend-item'><span class='legend-swatch' style='background:{c};'></span>{lbl}</span>"
+            for lbl, c in legend
+        )
+        html += f"<div class='legend-row'>{items}</div>"
+    st.markdown(html, unsafe_allow_html=True)
+
+
+def style_fig(fig, height, y_title=None, x_title=None, show_legend=False):
+    """One consistent, quiet chart look: recessive hairline grid, muted axes, card-coloured surface."""
+    axis_font = dict(size=12, color=CHART_TEXT, family="Inter, sans-serif")
+    fig.update_layout(
+        plot_bgcolor=CHART_BG, paper_bgcolor=CHART_BG,
+        font=dict(family="Inter, sans-serif", color=CHART_TEXT, size=12),
+        height=height, margin=dict(l=4, r=12, t=8, b=4),
+        showlegend=show_legend,
+        legend=dict(orientation="h", y=1.02, yanchor="bottom", x=0, font=dict(size=12, color=CHART_TEXT)),
+        hoverlabel=dict(bgcolor=COLOR_CARD, bordercolor=COLOR_BORDER, font=dict(family="Inter, sans-serif", size=13, color=COLOR_TEXT)),
+        bargap=0.35,
+    )
+    fig.update_xaxes(
+        showgrid=False, zeroline=False, linecolor=CHART_AXIS, linewidth=1, ticks="",
+        tickfont=axis_font, title=x_title, title_font=axis_font,
+    )
+    fig.update_yaxes(
+        gridcolor=CHART_GRID, gridwidth=1, zeroline=False, linecolor=CHART_AXIS, ticks="",
+        tickfont=axis_font, title=y_title, title_font=axis_font,
+        exponentformat="none", separatethousands=True,
+    )
+    return fig
+
+
+PLOTLY_CONFIG = {"displayModeBar": False}
+
+
+
+# Permanent company branding — edit this constant directly to change the
+# name. To change the logo, replace the file at .streamlit/logo.png.
+COMPANY_NAME = "Supreme Facility Management Limited"
 
 
 # ---------------------------------------------------------------------------
@@ -306,17 +469,38 @@ def save_branding(data):
 
 
 # ---------------------------------------------------------------------------
+# Brand header band (shown at the top of every page, and on the login screen)
+# ---------------------------------------------------------------------------
+def render_brand_header(title="GPS vs MIS Dashboard", subtitle=None):
+    def chip(icon, text):
+        return f"<span class='hero-chip'>{icon_svg(icon)}{text}</span>"
+
+    chips = ""
+    if st.session_state.get("authenticated"):
+        if st.session_state.get("month_label"):
+            chips += chip("calendar", st.session_state.month_label)
+        if st.session_state.get("threshold") is not None:
+            chips += chip("sliders", f"Flag limit ±{st.session_state.threshold}%")
+    sub_html = f"<div class='hero-sub'>{subtitle}</div>" if subtitle else ""
+    st.markdown(
+        f"<div class='brand-hero'>"
+        f"<div style='position:relative; z-index:1;'>"
+        f"<div class='hero-eyebrow'>{COMPANY_NAME} · Fleet telemetry reconciliation</div>"
+        f"<div class='hero-title'>{title}</div>{sub_html}</div>"
+        f"<div class='hero-chips'>{chips}</div>"
+        f"</div>",
+        unsafe_allow_html=True,
+    )
+
+
+# ---------------------------------------------------------------------------
 # Login
 # ---------------------------------------------------------------------------
 def check_login():
     if st.session_state.get("authenticated"):
         return True
 
-    st.markdown(
-        "<div class='eyebrow'>Fleet Telemetry Reconciliation</div>"
-        "<h1 style='margin-top:2px;'>GPS vs MIS Dashboard</h1>",
-        unsafe_allow_html=True,
-    )
+    render_brand_header("GPS vs MIS Fleet Dashboard", "Sign in with your admin account to view this month's reconciliation.")
     st.markdown("#### Admin login")
     with st.form("login_form"):
         username = st.text_input("Username")
@@ -343,10 +527,6 @@ def check_login():
 
 if not check_login():
     st.stop()
-
-# Permanent company branding — edit this constant directly to change the
-# name. To change the logo, replace the file at .streamlit/logo.png.
-COMPANY_NAME = "Supreme Facility Management Limited"
 
 # Streamlit always renders the page navigation above st.sidebar content, so
 # the logo goes through st.logo and the company name is injected as a
@@ -533,17 +713,6 @@ def get_previous_entry(hist, current_key):
 
 
 # ---------------------------------------------------------------------------
-# Brand header (shown at the top of every page)
-# ---------------------------------------------------------------------------
-def render_brand_header():
-    st.markdown(
-        "<div class='eyebrow'>Fleet Telemetry Reconciliation</div>"
-        "<h1 style='margin-top:2px;'>GPS vs MIS Dashboard</h1>",
-        unsafe_allow_html=True,
-    )
-
-
-# ---------------------------------------------------------------------------
 # Data source — upload / pick a saved month / set the flag threshold.
 # Lives in the sidebar so it's available on every page without re-uploading.
 # ---------------------------------------------------------------------------
@@ -647,74 +816,224 @@ st.session_state.daily_df = daily_df
 st.session_state.has_daily = has_daily
 st.session_state.threshold = threshold
 st.session_state.prev_entry = prev_entry
+st.session_state.month_key = month_key
+st.session_state.month_label = month_label.strip() if view_choice == "📤 Uploaded file" else view_choice
 
 
 # ---------------------------------------------------------------------------
 # Pages
 # ---------------------------------------------------------------------------
+SEVERITY_ORDER = ["critical", "warn", "watch", "ok"]
+
+
+def history_up_to(month_key, limit=6):
+    """Saved months up to and including month_key, oldest first (for KPI sparklines)."""
+    entries = sorted(load_history().values(), key=lambda e: e["key"])
+    return [e for e in entries if e["key"] <= month_key][-limit:]
+
+
+def daily_trend_fig(data, height=320, value_fmt=",.0f"):
+    """GPS vs MIS km per day of month — two 2px lines, unified hover."""
+    fig = go.Figure()
+    for col, name, color in (("GPS", "GPS", COLOR_GPS), ("MIS", "MIS", COLOR_MIS)):
+        fig.add_trace(go.Scatter(
+            x=data["Day"], y=data[col], name=name, mode="lines+markers",
+            line=dict(color=color, width=2, shape="linear"),
+            marker=dict(size=7, color=color, line=dict(color=CHART_BG, width=2)),
+            hovertemplate=f"{name}: %{{y:{value_fmt}}} km<extra></extra>",
+        ))
+    style_fig(fig, height, y_title="Km", x_title="Day of month")
+    fig.update_xaxes(dtick=2)
+    fig.update_yaxes(tickformat=",.0f", rangemode="tozero")
+    fig.update_layout(hovermode="x unified")
+    return fig
+
+
+def site_deviation_fig(site_summary, threshold_pct, height):
+    """Diverging horizontal bars: MIS vs GPS difference % per site, coloured by status,
+    with the ± flag threshold drawn as reference lines. Largest deviation at the top."""
+    data = site_summary.copy()
+    data["pct"] = data["Diff %"] * 100
+    data = data.reindex(data["pct"].abs().sort_values(ascending=True).index)
+    colors = data["Severity"].map(STATUS_FILL)
+    fig = go.Figure(go.Bar(
+        y=data["Site"], x=data["pct"], orientation="h",
+        marker=dict(color=colors, cornerradius=4),
+        text=data["pct"].apply(lambda v: f"{v:+.1f}%"), textposition="outside", cliponaxis=False,
+        textfont=dict(size=12, color=COLOR_TEXT, family="Inter, sans-serif"),
+        customdata=list(zip(data["Total_GPS"], data["Total_MIS"], data["Severity"].map(STATUS_LABEL))),
+        hovertemplate="<b>%{y}</b><br>Diff: %{x:+.1f}%<br>GPS: %{customdata[0]:,.0f} km"
+                      "<br>MIS: %{customdata[1]:,.0f} km<br>Status: %{customdata[2]}<extra></extra>",
+    ))
+    style_fig(fig, height, x_title="MIS vs GPS difference (%)")
+    t = float(threshold_pct)
+    lo = min(data["pct"].min(), -t) if len(data) else -t
+    hi = max(data["pct"].max(), t) if len(data) else t
+    pad = (hi - lo) * 0.18
+    fig.update_xaxes(range=[lo - pad, hi + pad], showgrid=True, gridcolor=CHART_GRID, ticksuffix="%")
+    fig.update_yaxes(showgrid=False, automargin=True, tickfont=dict(size=12.5, color=COLOR_TEXT))
+    fig.add_vline(x=0, line=dict(color=CHART_AXIS, width=1))
+    for x in (-t, t):
+        fig.add_vline(x=x, line=dict(color=COLOR_MUTED, width=1, dash="dot"))
+    fig.add_annotation(x=t, y=1, yref="paper", yanchor="bottom", text=f"+{t:.0f}% limit", showarrow=False,
+                       font=dict(size=11, color=COLOR_MUTED))
+    fig.add_annotation(x=-t, y=1, yref="paper", yanchor="bottom", text=f"−{t:.0f}% limit", showarrow=False,
+                       font=dict(size=11, color=COLOR_MUTED))
+    fig.update_layout(margin=dict(l=4, r=16, t=24, b=4), bargap=0.32)
+    return fig
+
+
+def fleet_status_fig(df):
+    """Donut of vehicles by status, flagged count in the centre."""
+    counts = df["Severity"].value_counts()
+    sev = [s for s in SEVERITY_ORDER if counts.get(s, 0) > 0]
+    vals = [int(counts[s]) for s in sev]
+    flagged = int((df["Action"] != "No action needed").sum())
+    fig = go.Figure(go.Pie(
+        labels=[STATUS_LABEL[s] for s in sev], values=vals, hole=0.68, sort=False, direction="clockwise",
+        marker=dict(colors=[STATUS_FILL[s] for s in sev], line=dict(color=CHART_BG, width=3)),
+        textinfo="none",
+        hovertemplate="<b>%{label}</b><br>%{value} vehicles (%{percent})<extra></extra>",
+    ))
+    fig.update_layout(
+        plot_bgcolor=CHART_BG, paper_bgcolor=CHART_BG, height=250, margin=dict(l=0, r=0, t=6, b=6),
+        showlegend=False, font=dict(family="Inter, sans-serif"),
+        hoverlabel=dict(bgcolor=COLOR_CARD, bordercolor=COLOR_BORDER, font=dict(family="Inter, sans-serif", size=13, color=COLOR_TEXT)),
+        annotations=[
+            dict(text=f"<b>{flagged}</b>", x=0.5, y=0.55, showarrow=False, font=dict(size=30, color=COLOR_TEXT)),
+            dict(text="flagged", x=0.5, y=0.38, showarrow=False, font=dict(size=13, color=COLOR_MUTED)),
+        ],
+    )
+    return fig, [(f"{STATUS_LABEL[s]} · {int(counts[s])}", STATUS_FILL[s]) for s in sev]
+
+
+def monthly_totals_fig(entries, height=300):
+    """Grouped columns: total GPS vs MIS km per saved month."""
+    months = [e["label"] for e in entries]
+    fig = go.Figure()
+    for key, name, color in (("total_gps", "GPS", COLOR_GPS), ("total_mis", "MIS", COLOR_MIS)):
+        fig.add_trace(go.Bar(
+            x=months, y=[e[key] for e in entries], name=name,
+            marker=dict(color=color, cornerradius=4),
+            hovertemplate=f"<b>%{{x}}</b><br>{name}: %{{y:,.0f}} km<extra></extra>",
+        ))
+    style_fig(fig, height, y_title="Km")
+    fig.update_yaxes(tickformat=",.0f")
+    fig.update_layout(barmode="group", bargap=0.38, bargroupgap=0.12)
+    return fig
+
+
+def monthly_diff_fig(entries, threshold_pct, height=240):
+    """Overall MIS vs GPS difference % per month, coloured by the same status rule as sites."""
+    t = threshold_pct / 100
+    months, pcts, colors, labels = [], [], [], []
+    for e in entries:
+        p = ((e["total_mis"] - e["total_gps"]) / e["total_gps"]) if e["total_gps"] else 0
+        sev = "critical" if abs(p) > t else ("watch" if abs(p) > t * 0.5 else "ok")
+        months.append(e["label"])
+        pcts.append(p * 100)
+        colors.append(STATUS_FILL[sev])
+        labels.append(STATUS_LABEL[sev])
+    fig = go.Figure(go.Bar(
+        x=months, y=pcts, marker=dict(color=colors, cornerradius=4),
+        text=[f"{v:+.1f}%" for v in pcts], textposition="outside", cliponaxis=False,
+        textfont=dict(size=12, color=COLOR_TEXT), customdata=labels,
+        hovertemplate="<b>%{x}</b><br>Diff: %{y:+.1f}%<br>Status: %{customdata}<extra></extra>",
+    ))
+    style_fig(fig, height, y_title="Diff %")
+    fig.update_yaxes(ticksuffix="%")
+    fig.add_hline(y=0, line=dict(color=CHART_AXIS, width=1))
+    for y in (-threshold_pct, threshold_pct):
+        fig.add_hline(y=y, line=dict(color=COLOR_MUTED, width=1, dash="dot"))
+    fig.update_layout(bargap=0.55, margin=dict(l=4, r=12, t=24, b=4))
+    return fig
+
+
 def page_overview():
     df = st.session_state.df
     daily_df = st.session_state.daily_df
     has_daily = st.session_state.has_daily
     prev_entry = st.session_state.prev_entry
+    threshold = st.session_state.threshold
 
-    render_brand_header()
+    render_brand_header("Fleet overview", "GPS-tracked vs MIS-logged kilometres, reconciled for every vehicle and site.")
 
     total_gps = df["Total GPS"].sum()
     total_mis = df["Total MIS"].sum()
     overall_diff = total_mis - total_gps
     overall_pct = (overall_diff / total_gps) if total_gps else 0
-    flagged = (df["Action"] != "No action needed").sum()
+    flagged = int((df["Action"] != "No action needed").sum())
+    n_sites = df["Site"].nunique()
 
-    if prev_entry:
-        gps_delta = total_gps - prev_entry["total_gps"]
-        mis_delta = total_mis - prev_entry["total_mis"]
-        gps_delta_label = f"{gps_delta:+,.0f} km vs {prev_entry['label']}"
-        mis_delta_label = f"{mis_delta:+,.0f} km vs {prev_entry['label']}"
-    else:
-        gps_delta_label = mis_delta_label = None
-        st.caption("No previous month saved yet to compare against — once you save another month, comparisons will show here automatically.")
+    past = history_up_to(st.session_state.month_key)
+    has_trend = len(past) >= 2
+
+    def km_delta(current, previous):
+        d = current - previous
+        return f"{'▲' if d >= 0 else '▼'} {abs(d):,.0f} km"
+
+    vs_prev = f"vs {prev_entry['label']}" if prev_entry else None
 
     c1, c2, c3, c4, c5 = st.columns(5)
-    gps_positive = prev_entry is not None and (total_gps - prev_entry["total_gps"]) >= 0
-    mis_positive = prev_entry is not None and (total_mis - prev_entry["total_mis"]) >= 0
-    kpi_card(c1, "📡", COLOR_GPS, "TOTAL GPS KM", f"{total_gps:,.0f}",
-             gps_delta_label.replace(" km", "") if gps_delta_label else None, gps_positive)
-    kpi_card(c2, "📝", COLOR_MIS, "TOTAL MIS KM", f"{total_mis:,.0f}",
-             mis_delta_label.replace(" km", "") if mis_delta_label else None, mis_positive)
-    kpi_card(c3, "⚠️", COLOR_DIFF, "OVERALL DIFF", f"{overall_pct*100:.1f}%",
-             f"{overall_diff:+,.0f} km", overall_diff >= 0)
-    kpi_card(c4, "🚚", COLOR_VEHICLES, "VEHICLES", f"{len(df)}",
-             f"{df['Site'].nunique()} sites", neutral=True)
-    kpi_card(c5, "🚩", COLOR_FLAGGED, "FLAGGED", f"{flagged}",
-             f"{flagged/len(df)*100:.0f}% of fleet", neutral=True)
+    kpi_card(c1, "gps", COLOR_GPS, "Total GPS km", f"{total_gps:,.0f}",
+             delta_text=km_delta(total_gps, prev_entry["total_gps"]) if prev_entry else None,
+             delta_tone="neutral", vs_text=vs_prev,
+             spark=[e["total_gps"] for e in past] if has_trend else None)
+    kpi_card(c2, "mis", COLOR_MIS, "Total MIS km", f"{total_mis:,.0f}",
+             delta_text=km_delta(total_mis, prev_entry["total_mis"]) if prev_entry else None,
+             delta_tone="neutral", vs_text=vs_prev,
+             spark=[e["total_mis"] for e in past] if has_trend else None)
+    over_limit = abs(overall_pct) * 100 > threshold
+    kpi_card(c3, "diff", COLOR_DIFF, "Net difference", f"{overall_pct*100:+.1f}", unit="%",
+             delta_text=f"{overall_diff:+,.0f} km", delta_tone="bad" if over_limit else "good",
+             vs_text=f"{'Outside' if over_limit else 'Within'} ±{threshold}% limit",
+             spark=[((e["total_mis"] - e["total_gps"]) / e["total_gps"] * 100) if e["total_gps"] else 0 for e in past]
+             if has_trend else None)
+    kpi_card(c4, "truck", COLOR_VEHICLES, "Vehicles", f"{len(df):,}",
+             vs_text=f"across {n_sites} sites",
+             spark=[e["vehicles"] for e in past] if has_trend else None)
+    kpi_card(c5, "flag", COLOR_FLAGGED, "Flagged vehicles", f"{flagged:,}",
+             delta_text=f"{flagged/len(df)*100:.0f}% of fleet" if len(df) else None, delta_tone="bad" if flagged else "good",
+             meter=(flagged / len(df)) if len(df) else 0)
 
+    if not prev_entry:
+        st.caption("No previous month saved yet — month-on-month comparisons appear here once another month is saved.")
+    if has_trend:
+        st.caption(f"Trend lines in the cards show the last {len(past)} saved months, ending with {past[-1]['label']}.")
+
+    st.write("")
     if has_daily:
-        st.markdown("### Day-wise total km, all vehicles")
-        trend = daily_df.groupby("Day", as_index=False)[["GPS", "MIS"]].sum()
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(
-            x=trend["Day"], y=trend["GPS"], name="GPS", mode="lines+markers",
-            line=dict(color=COLOR_GPS, width=2.5), marker=dict(size=5),
-            hovertemplate="Day %{x}<br>GPS: %{y:,.0f} km<extra></extra>",
-        ))
-        fig.add_trace(go.Scatter(
-            x=trend["Day"], y=trend["MIS"], name="MIS", mode="lines+markers",
-            line=dict(color=COLOR_MIS, width=2.5), marker=dict(size=5),
-            hovertemplate="Day %{x}<br>MIS: %{y:,.0f} km<extra></extra>",
-        ))
-        fig.update_layout(
-            plot_bgcolor=CHART_BG, paper_bgcolor=CHART_BG, font=dict(family="Inter, sans-serif", color=CHART_TEXT),
-            height=340, margin=dict(l=10, r=10, t=10, b=10),
-            xaxis=dict(gridcolor=CHART_GRID, title="Day of month", tickfont=dict(size=13, color=CHART_TEXT), title_font=dict(size=13, color=CHART_TEXT), dtick=2),
-            yaxis=dict(gridcolor=CHART_GRID, title="Km", tickfont=dict(size=13, color=CHART_TEXT), title_font=dict(size=13, color=CHART_TEXT), tickformat=",.0f", exponentformat="none", separatethousands=True),
-            legend=dict(orientation="h", y=1.1, font=dict(size=13, color=CHART_TEXT)),
-            hovermode="x unified",
-        )
-        with st.container(border=True):
-            st.plotly_chart(fig, use_container_width=True, key="chart_day_trend")
-    else:
-        st.caption("Daily chart isn't available for saved history months — only totals are stored.")
+        with st.container(border=True, key="card_1"):
+            card_header("Day-wise kilometres, whole fleet", "Total km recorded each day by GPS and logged in MIS",
+                        legend=[("GPS", COLOR_GPS), ("MIS", COLOR_MIS)])
+            trend = daily_df.groupby("Day", as_index=False)[["GPS", "MIS"]].sum()
+            st.plotly_chart(daily_trend_fig(trend), use_container_width=True, key="chart_day_trend", config=PLOTLY_CONFIG)
+
+    site_summary = compute_site_summary(df, threshold)
+    left, right = st.columns([1.65, 1], gap="medium")
+    with left:
+        with st.container(border=True, key="card_2"):
+            top = site_summary.head(10)
+            card_header("Sites with the largest difference",
+                        f"Top {len(top)} of {len(site_summary)} sites by MIS vs GPS difference — dotted lines mark the ±{threshold}% limit")
+            st.plotly_chart(site_deviation_fig(top, threshold, max(300, len(top) * 34 + 60)),
+                            use_container_width=True, key="chart_overview_sites", config=PLOTLY_CONFIG)
+    with right:
+        with st.container(border=True, key="card_3"):
+            fig_status, legend = fleet_status_fig(df)
+            card_header("Fleet status", "Vehicles by recommended action", legend=legend)
+            st.plotly_chart(fig_status, use_container_width=True, key="chart_fleet_status", config=PLOTLY_CONFIG)
+
+    all_months = sorted(load_history().values(), key=lambda e: e["key"])
+    if len(all_months) >= 2:
+        with st.container(border=True, key="card_4"):
+            card_header("Month-on-month totals", "Total GPS vs MIS km for every saved month",
+                        legend=[("GPS", COLOR_GPS), ("MIS", COLOR_MIS)])
+            st.plotly_chart(monthly_totals_fig(all_months, 280), use_container_width=True,
+                            key="chart_overview_months", config=PLOTLY_CONFIG)
+
+    if not has_daily:
+        st.caption("The day-wise chart isn't available for this month — it was saved before daily figures were stored. Re-upload the file to add it.")
 
 
 def compute_site_summary(df, threshold):
@@ -741,88 +1060,71 @@ def page_sites():
     df = st.session_state.df
     threshold = st.session_state.threshold
 
-    render_brand_header()
-    st.markdown("### Sites")
+    render_brand_header("Sites", "Kilometre volume and GPS vs MIS difference for every site.")
 
     site_summary = compute_site_summary(df, threshold)
     n_sites = len(site_summary)
-    bar_height = max(320, n_sites * 30)
+    n_crit = int((site_summary["Severity"] == "critical").sum())
+    n_watch = int((site_summary["Severity"] == "watch").sum())
 
-    def make_site_volume_chart(data, chart_height):
-        fig = go.Figure()
-        fig.add_trace(go.Bar(
-            y=data["Site"], x=data["Total_GPS"], name="GPS", orientation="h",
-            marker_color=COLOR_GPS, text=data["Total_GPS"].apply(lambda v: f"{v:,.0f}"),
-            textposition="outside", textfont=dict(size=12, color=CHART_TEXT, family="Inter, sans-serif"),
-            hovertemplate="%{y}<br>GPS: %{x:,.0f} km<extra></extra>",
-        ))
-        fig.add_trace(go.Bar(
-            y=data["Site"], x=data["Total_MIS"], name="MIS", orientation="h",
-            marker_color=COLOR_MIS, text=data["Total_MIS"].apply(lambda v: f"{v:,.0f}"),
-            textposition="outside", textfont=dict(size=12, color=CHART_TEXT, family="Inter, sans-serif"),
-            hovertemplate="%{y}<br>MIS: %{x:,.0f} km<extra></extra>",
-        ))
-        fig.update_layout(
-            barmode="group", plot_bgcolor=CHART_BG, paper_bgcolor=CHART_BG, font=dict(family="Inter, sans-serif", color=CHART_TEXT),
-            height=chart_height, margin=dict(l=10, r=50, t=10, b=30),
-            xaxis=dict(gridcolor=CHART_GRID, title="Km", tickfont=dict(size=12, color=CHART_TEXT), title_font=dict(size=13, color=CHART_TEXT), tickformat=",.0f", exponentformat="none", separatethousands=True),
-            yaxis=dict(tickfont=dict(size=13, family="Inter", color=CHART_TEXT), automargin=True),
-            legend=dict(orientation="h", y=1.05, x=0, font=dict(size=12, color=CHART_TEXT)),
-            bargap=0.28, bargroupgap=0.08,
-        )
-        return fig
+    c1, c2, c3, c4 = st.columns(4)
+    kpi_card(c1, "building", COLOR_VEHICLES, "Sites", f"{n_sites}", vs_text=f"{len(df):,} vehicles in total")
+    kpi_card(c2, "flag", COLOR_CRIT, "Outside limit", f"{n_crit}",
+             delta_text=f"{n_crit/n_sites*100:.0f}% of sites" if n_sites else None, delta_tone="bad" if n_crit else "good",
+             meter=(n_crit / n_sites) if n_sites else 0)
+    kpi_card(c3, "sliders", COLOR_WARN, "On watch", f"{n_watch}", vs_text=f"between ±{threshold/2:g}% and ±{threshold}%",
+             meter=(n_watch / n_sites) if n_sites else 0)
+    worst = site_summary.iloc[0] if n_sites else None
+    kpi_card(c4, "diff", COLOR_DIFF, "Largest difference",
+             f"{worst['Diff %']*100:+.1f}" if worst is not None else "—", unit="%" if worst is not None else None,
+             vs_text=str(worst["Site"]) if worst is not None else None)
+
+    st.write("")
+    with st.container(border=True, key="card_5"):
+        card_header("Difference by site", f"MIS vs GPS km difference — dotted lines mark the ±{threshold}% flag limit",
+                    legend=[(STATUS_LABEL[s], STATUS_FILL[s]) for s in ("critical", "watch", "ok")])
+        st.plotly_chart(site_deviation_fig(site_summary, threshold, max(320, n_sites * 30 + 60)),
+                        use_container_width=True, key="chart_sites_diff", config=PLOTLY_CONFIG)
 
     vol_sorted = site_summary.sort_values("Total_GPS", ascending=True)
+    fig_vol = go.Figure()
+    for col, name, color in (("Total_GPS", "GPS", COLOR_GPS), ("Total_MIS", "MIS", COLOR_MIS)):
+        fig_vol.add_trace(go.Bar(
+            y=vol_sorted["Site"], x=vol_sorted[col], name=name, orientation="h",
+            marker=dict(color=color, cornerradius=4),
+            hovertemplate=f"<b>%{{y}}</b><br>{name}: %{{x:,.0f}} km<extra></extra>",
+        ))
+    style_fig(fig_vol, max(320, n_sites * 34), x_title="Km")
+    fig_vol.update_xaxes(showgrid=True, gridcolor=CHART_GRID, tickformat=",.0f")
+    fig_vol.update_yaxes(showgrid=False, automargin=True, tickfont=dict(size=12.5, color=COLOR_TEXT))
+    fig_vol.update_layout(barmode="group", bargap=0.3, bargroupgap=0.1)
 
-    st.caption("GPS vs MIS total km by site — sorted by GPS volume, scroll inside the box to see all sites")
-    with st.container(height=480, border=True):
-        st.plotly_chart(make_site_volume_chart(vol_sorted, bar_height), use_container_width=True, key="chart_sites_vol")
-
-    site_bar_colors = site_summary["Severity"].map(ACTION_COLORS)
-    fig_sites_diff = go.Figure()
-    fig_sites_diff.add_trace(go.Bar(
-        x=site_summary["Site"], y=site_summary["Diff %"] * 100,
-        marker_color=site_bar_colors, name="Diff %",
-    ))
-    fig_sites_diff.update_layout(
-        plot_bgcolor=CHART_BG, paper_bgcolor=CHART_BG, font=dict(family="Inter, sans-serif", color=CHART_TEXT),
-        height=260, margin=dict(l=10, r=10, t=10, b=10),
-        xaxis=dict(gridcolor=CHART_GRID, tickangle=-35, tickfont=dict(color=CHART_TEXT, size=13)), yaxis=dict(gridcolor=CHART_GRID, title="Diff %", tickfont=dict(color=CHART_TEXT, size=13), title_font=dict(size=13, color=CHART_TEXT)),
-        showlegend=False,
-    )
-    with st.container(border=True):
-        st.plotly_chart(fig_sites_diff, use_container_width=True, key="chart_sites_diff")
+    with st.container(border=True, key="card_6"):
+        card_header("Kilometre volume by site", "Total GPS vs MIS km, largest sites at the top — scroll inside the box to see all sites",
+                    legend=[("GPS", COLOR_GPS), ("MIS", COLOR_MIS)])
+        with st.container(height=440, border=False):
+            st.plotly_chart(fig_vol, use_container_width=True, key="chart_sites_vol", config=PLOTLY_CONFIG)
 
     def style_site_row(row):
         color = ACTION_COLORS.get(row["Severity"], COLOR_TEXT)
-        styles = []
-        for col in row.index:
-            if col == "Total_GPS":
-                styles.append(f"color: {COLOR_GPS};")
-            elif col == "Total_MIS":
-                styles.append(f"color: {COLOR_MIS};")
-            elif col == "Diff %":
-                styles.append(f"color: {color}; font-weight: 600;")
-            else:
-                styles.append("")
-        return styles
+        return [f"color: {color}; font-weight: 600;" if col == "Diff %" else "" for col in row.index]
 
     site_styled = (
         site_summary.style
         .apply(style_site_row, axis=1)
-        .format({"Total_GPS": "{:,.0f}", "Total_MIS": "{:,.0f}", "Diff %": "{:.1%}"})
+        .format({"Total_GPS": "{:,.0f}", "Total_MIS": "{:,.0f}", "Diff %": "{:+.1%}"})
         .hide(axis="columns", subset=["Severity"])
     )
-    st.dataframe(site_styled, use_container_width=True, hide_index=True)
+    st.markdown("#### Site table")
+    st.dataframe(site_styled, use_container_width=True, hide_index=True, column_config={"Severity": None})
 
 
 def page_vehicles():
     df = st.session_state.df
 
-    render_brand_header()
+    render_brand_header("Vehicles", "Recommended corrective action for every vehicle — click a tile to filter the table.")
 
     st.markdown("### Corrective actions")
-    st.caption("Click a card to filter the vehicle table below to just those vehicles.")
     order = ["Check GPS device", "File missing MIS log", "No data either side", "Audit MIS entries",
              "Verify unrecorded trips", "Keep an eye on it", "No action needed"]
     action_counts = df.groupby(["Action", "Severity"]).size().reset_index(name="Count")
@@ -881,10 +1183,10 @@ def page_vehicles():
     display_df = view[display_cols]
 
     ACTION_BG = {
-        "critical": hex_to_rgba(COLOR_CRIT, 0.18),
-        "warn": hex_to_rgba(COLOR_WARN, 0.18),
-        "watch": hex_to_rgba(COLOR_WARN, 0.10),
-        "ok": hex_to_rgba(COLOR_OK, 0.14),
+        "critical": hex_to_rgba(COLOR_CRIT, 0.14),
+        "warn": hex_to_rgba(COLOR_WARN, 0.14),
+        "watch": hex_to_rgba(COLOR_WARN, 0.08),
+        "ok": hex_to_rgba(COLOR_OK, 0.10),
     }
 
     def style_row(row):
@@ -892,14 +1194,10 @@ def page_vehicles():
         bg = ACTION_BG.get(row["Severity"], "")
         styles = []
         for col in row.index:
-            if col == "Total GPS":
-                styles.append(f"color: {COLOR_GPS};")
-            elif col == "Total MIS":
-                styles.append(f"color: {COLOR_MIS};")
-            elif col == "Diff %":
+            if col == "Diff %":
                 styles.append(f"color: {color}; font-weight: 600;")
             elif col == "Action":
-                styles.append(f"color: {color}; background-color: {bg}; font-weight: 500; border-radius: 5px;")
+                styles.append(f"color: {color}; background-color: {bg}; font-weight: 500;")
             else:
                 styles.append("")
         return styles
@@ -907,67 +1205,59 @@ def page_vehicles():
     styled = (
         display_df.style
         .apply(style_row, axis=1)
-        .format({"Total GPS": "{:,.1f}", "Total MIS": "{:,.1f}", "Diff %": "{:.1%}"})
+        .format({"Total GPS": "{:,.1f}", "Total MIS": "{:,.1f}", "Diff %": "{:+.1%}"})
         .hide(axis="columns", subset=["Severity"])
     )
 
-    st.dataframe(styled, use_container_width=True, hide_index=True, height=460)
+    st.dataframe(styled, use_container_width=True, hide_index=True, height=460, column_config={"Severity": None})
 
 
 def page_drilldown():
     df = st.session_state.df
     daily_df = st.session_state.daily_df
     has_daily = st.session_state.has_daily
+    threshold = st.session_state.threshold
 
-    render_brand_header()
-    st.markdown("### Vehicle drill-down")
-    veh_pick = st.selectbox("Pick a vehicle to see its daily GPS vs MIS chart", df["Vehicle"].tolist())
-    if veh_pick:
-        row = df[df["Vehicle"] == veh_pick].iloc[0]
-        color = ACTION_COLORS[row["Severity"]]
-        st.markdown(
-            f"<div class='action-card' style='border-color:{color}55;'>"
-            f"<b style='color:{color};'>{row['Action']}</b><br>"
-            f"<span style='color:{COLOR_MUTED}; font-size:13px;'>{row['ActionDetail']}</span></div>",
-            unsafe_allow_html=True,
-        )
-        vd = daily_df[daily_df["Vehicle"] == veh_pick]
-        if has_daily and len(vd):
-            fig2 = go.Figure()
-            fig2.add_trace(go.Scatter(
-                x=vd["Day"], y=vd["GPS"], name="GPS", mode="lines+markers",
-                line=dict(color=COLOR_GPS, width=2.5), marker=dict(size=5),
-                hovertemplate="Day %{x}<br>GPS: %{y:,.1f} km<extra></extra>",
-            ))
-            fig2.add_trace(go.Scatter(
-                x=vd["Day"], y=vd["MIS"], name="MIS", mode="lines+markers",
-                line=dict(color=COLOR_MIS, width=2.5), marker=dict(size=5),
-                hovertemplate="Day %{x}<br>MIS: %{y:,.1f} km<extra></extra>",
-            ))
-            fig2.update_layout(
-                plot_bgcolor=CHART_BG, paper_bgcolor=CHART_BG, font=dict(family="Inter, sans-serif", color=CHART_TEXT),
-                height=340, margin=dict(l=10, r=10, t=10, b=10),
-                xaxis=dict(gridcolor=CHART_GRID, title="Day of month", tickfont=dict(size=13, color=CHART_TEXT), title_font=dict(size=13, color=CHART_TEXT), dtick=2),
-                yaxis=dict(gridcolor=CHART_GRID, title="Km", tickfont=dict(size=13, color=CHART_TEXT), title_font=dict(size=13, color=CHART_TEXT), tickformat=",.0f", exponentformat="none", separatethousands=True),
-                legend=dict(orientation="h", y=1.1, font=dict(size=13, color=CHART_TEXT)),
-                hovermode="x unified",
-            )
-            with st.container(border=True):
-                st.plotly_chart(fig2, use_container_width=True, key="chart_vehicle_drilldown")
-        else:
-            st.caption("Daily chart isn't available for saved history months — only totals are stored.")
+    render_brand_header("Vehicle drill-down", "Month totals, recommended action and the day-by-day record for one vehicle.")
+    veh_pick = st.selectbox("Pick a vehicle", df["Vehicle"].tolist())
+    if not veh_pick:
+        return
+    row = df[df["Vehicle"] == veh_pick].iloc[0]
+    color = ACTION_COLORS[row["Severity"]]
+
+    c1, c2, c3, c4 = st.columns(4)
+    kpi_card(c1, "gps", COLOR_GPS, "GPS km", f"{row['Total GPS']:,.1f}", vs_text=f"Site: {row['Site']}")
+    kpi_card(c2, "mis", COLOR_MIS, "MIS km", f"{row['Total MIS']:,.1f}", vs_text=f"Source: {row['Source']}")
+    over = abs(row["Diff %"]) * 100 > threshold
+    kpi_card(c3, "diff", COLOR_DIFF, "Difference", f"{row['Diff %']*100:+.1f}", unit="%",
+             delta_text=f"{row['Diff']:+,.1f} km", delta_tone="bad" if over else "good",
+             vs_text=f"{'Outside' if over else 'Within'} ±{threshold}% limit")
+    kpi_card(c4, "flag", color, "Status", STATUS_LABEL.get(row["Severity"], "—"), vs_text=row["Action"])
+
+    st.markdown(
+        f"<div class='action-card' style='border-left:4px solid {color}; margin-top:14px;'>"
+        f"<b style='color:{color};'>{row['Action']}</b><br>"
+        f"<span style='color:{COLOR_MUTED}; font-size:13.5px;'>{row['ActionDetail']}</span></div>",
+        unsafe_allow_html=True,
+    )
+    vd = daily_df[daily_df["Vehicle"] == veh_pick]
+    if has_daily and len(vd):
+        with st.container(border=True, key="card_7"):
+            card_header(f"Daily kilometres — {veh_pick}", "Km recorded each day by GPS and logged in MIS",
+                        legend=[("GPS", COLOR_GPS), ("MIS", COLOR_MIS)])
+            st.plotly_chart(daily_trend_fig(vd, value_fmt=",.1f"), use_container_width=True,
+                            key="chart_vehicle_drilldown", config=PLOTLY_CONFIG)
+    else:
+        st.caption("The day-wise chart isn't available for this month — it was saved before daily figures were stored.")
 
 
 def page_history():
-    render_brand_header()
-    st.markdown("### Monthly history")
+    render_brand_header("Monthly history", "Every uploaded month is saved automatically, so you can track the trend.")
 
     hist = load_history()  # reload in case this run just saved a new entry
     if not hist:
         st.info("No saved months yet — upload a file to start building history.")
         return
-
-    st.caption("Every file you upload is saved here automatically under its month label, even after you upload a different file or restart the app.")
 
     sorted_entries = sorted(hist.values(), key=lambda x: x["key"])
     hist_df = pd.DataFrame([{
@@ -976,21 +1266,23 @@ def page_history():
         "Vehicles": e["vehicles"], "Flagged": e.get("flagged", "-"),
     } for e in sorted_entries])
 
-    fig3 = go.Figure()
-    fig3.add_trace(go.Scatter(x=hist_df["Month"], y=hist_df["Total GPS"], name="GPS", line=dict(color=COLOR_GPS, width=2), mode="lines+markers", hovertemplate="%{x}<br>GPS: %{y:,.0f} km<extra></extra>"))
-    fig3.add_trace(go.Scatter(x=hist_df["Month"], y=hist_df["Total MIS"], name="MIS", line=dict(color=COLOR_MIS, width=2), mode="lines+markers", hovertemplate="%{x}<br>MIS: %{y:,.0f} km<extra></extra>"))
-    fig3.update_layout(
-        plot_bgcolor=CHART_BG, paper_bgcolor=CHART_BG, font=dict(family="Inter, sans-serif", color=CHART_TEXT),
-        height=300, margin=dict(l=10, r=10, t=10, b=10),
-        xaxis=dict(gridcolor=CHART_GRID, tickfont=dict(size=13, color=CHART_TEXT)),
-        yaxis=dict(gridcolor=CHART_GRID, tickfont=dict(size=13, color=CHART_TEXT), title="Km", title_font=dict(size=13, color=CHART_TEXT), tickformat=",.0f", exponentformat="none", separatethousands=True),
-        legend=dict(orientation="h", y=1.12, font=dict(size=13, color=CHART_TEXT)),
-    )
-    with st.container(border=True):
-        st.plotly_chart(fig3, use_container_width=True, key="chart_monthly_history")
+    threshold = st.session_state.threshold
+    left, right = st.columns([1.5, 1], gap="medium")
+    with left:
+        with st.container(border=True, key="card_8"):
+            card_header("Total kilometres by month", "GPS vs MIS km for each saved month",
+                        legend=[("GPS", COLOR_GPS), ("MIS", COLOR_MIS)])
+            st.plotly_chart(monthly_totals_fig(sorted_entries, 300), use_container_width=True,
+                            key="chart_monthly_history", config=PLOTLY_CONFIG)
+    with right:
+        with st.container(border=True, key="card_9"):
+            card_header("Overall difference by month", f"MIS vs GPS — dotted lines mark the ±{threshold}% limit",
+                        legend=[(STATUS_LABEL[s], STATUS_FILL[s]) for s in ("critical", "watch", "ok")])
+            st.plotly_chart(monthly_diff_fig(sorted_entries, threshold, 300), use_container_width=True,
+                            key="chart_monthly_diff", config=PLOTLY_CONFIG)
 
     st.dataframe(
-        hist_df.style.format({"Total GPS": "{:,.0f}", "Total MIS": "{:,.0f}", "Diff %": "{:.1%}"}),
+        hist_df.style.format({"Total GPS": "{:,.0f}", "Total MIS": "{:,.0f}", "Diff %": "{:+.1%}"}),
         use_container_width=True, hide_index=True,
     )
 

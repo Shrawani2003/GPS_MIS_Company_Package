@@ -1,18 +1,18 @@
 [theme]
 base = "light"
-font = "sans serif"
+font = "Inter:https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap, sans-serif"
 
 [theme.light]
-primaryColor = "#0891B2"
-backgroundColor = "#FFFFFF"
-secondaryBackgroundColor = "#F7F9FC"
+primaryColor = "#1E40AF"
+backgroundColor = "#F4F6FA"
+secondaryBackgroundColor = "#FFFFFF"
 textColor = "#0F172A"
 
 [theme.dark]
-primaryColor = "#00E5FF"
-backgroundColor = "#0A0E17"
-secondaryBackgroundColor = "#121a2c"
-textColor = "#F1F5FB"
+primaryColor = "#6E8BFF"
+backgroundColor = "#0B1120"
+secondaryBackgroundColor = "#121A2B"
+textColor = "#F1F5F9"
 
 [client]
 toolbarMode = "viewer"
