@@ -277,6 +277,48 @@ p, label, span, div {{ font-size: 15px; font-weight: 400; }}
 .st-key-corrective_actions button:hover {{ transform: translateY(-1px); }}
 .st-key-corrective_actions button p {{ color: inherit !important; font-size: 13px !important; text-align: left !important; }}
 
+/* Key findings panel */
+.insight-card {{
+    background: {COLOR_CARD}; border: 1px solid {COLOR_BORDER}; border-radius: 16px;
+    box-shadow: 0 1px 2px {SHADOW_SM}, 0 8px 24px {SHADOW_LG};
+    display: flex; gap: 28px; padding: 22px 26px; margin: 6px 0 18px; flex-wrap: wrap;
+}}
+.insight-card .score {{ display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 170px; text-align: center; }}
+.insight-card .score-ring {{
+    width: 128px; height: 128px; border-radius: 50%;
+    background: conic-gradient(var(--c) calc(var(--p) * 1%), color-mix(in srgb, var(--c) 14%, transparent) 0);
+    display: flex; align-items: center; justify-content: center;
+}}
+.insight-card .score-inner {{ width: 100px; height: 100px; border-radius: 50%; background: {COLOR_CARD}; display: flex; flex-direction: column; align-items: center; justify-content: center; }}
+.insight-card .score-val {{ color: {COLOR_TEXT} !important; font-size: 28px !important; font-weight: 750 !important; line-height: 1.1; }}
+.insight-card .score-lbl {{ color: {COLOR_MUTED} !important; font-size: 12px !important; font-weight: 500 !important; }}
+.insight-card .score-cap {{ color: {COLOR_TEXT} !important; font-size: 14px !important; font-weight: 650 !important; margin-top: 12px; }}
+.insight-card .score-sub {{ color: {COLOR_MUTED} !important; font-size: 12.5px !important; max-width: 180px; }}
+.insight-card .insight-body {{ flex: 1; min-width: 280px; border-left: 1px solid {COLOR_BORDER}; padding-left: 28px; }}
+.insight-card .insight-title {{ color: {COLOR_TEXT} !important; font-size: 16px !important; font-weight: 650 !important; margin-bottom: 10px; }}
+.insight-card .insight-row {{ display: flex; gap: 10px; align-items: flex-start; padding: 7px 0; border-bottom: 1px dashed {COLOR_BORDER}; }}
+.insight-card .insight-row:last-child {{ border-bottom: none; }}
+.insight-card .insight-dot {{ width: 9px; height: 9px; border-radius: 50%; flex: none; margin-top: 7px; }}
+.insight-card .insight-text {{ color: {COLOR_TEXT} !important; font-size: 14px !important; line-height: 1.5; }}
+.insight-card .insight-text b {{ font-weight: 650; }}
+
+/* Download button */
+.stDownloadButton button {{
+    background: {COLOR_CARD} !important; color: {COLOR_VEHICLES} !important;
+    border: 1px solid color-mix(in srgb, {COLOR_VEHICLES} 45%, {COLOR_BORDER}) !important;
+    border-radius: 8px !important; font-weight: 600 !important; box-shadow: 0 1px 2px {SHADOW_SM};
+}}
+.stDownloadButton button p {{ color: {COLOR_VEHICLES} !important; font-weight: 600 !important; font-size: 14px !important; }}
+.stDownloadButton button:hover {{ background: color-mix(in srgb, {COLOR_VEHICLES} 8%, {COLOR_CARD}) !important; }}
+
+/* Footer */
+.app-footer {{
+    margin-top: 36px; padding: 18px 4px 6px; border-top: 1px solid {COLOR_BORDER};
+    display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+}}
+.app-footer span {{ color: {COLOR_MUTED} !important; font-size: 12.5px !important; }}
+.app-footer b {{ color: {COLOR_TEXT}; font-weight: 600; }}
+
 /* Sidebar */
 [data-testid="stSidebar"] {{ background: {COLOR_PANEL} !important; border-right: 1px solid {COLOR_BORDER}; }}
 [data-testid="stSidebar"] img {{ border-radius: 8px; }}
@@ -501,11 +543,14 @@ def check_login():
         return True
 
     render_brand_header("GPS vs MIS Fleet Dashboard", "Sign in with your admin account to view this month's reconciliation.")
-    st.markdown("#### Admin login")
-    with st.form("login_form"):
-        username = st.text_input("Username")
-        password = st.text_input("Password", type="password")
-        submitted = st.form_submit_button("Log in")
+    _, mid, _ = st.columns([1, 1.3, 1])
+    with mid:
+        st.markdown("#### Admin login")
+        with st.form("login_form"):
+            username = st.text_input("Username")
+            password = st.text_input("Password", type="password")
+            submitted = st.form_submit_button("Log in", use_container_width=True)
+        st.caption("🔒 Confidential — for authorised Supreme Facility Management staff only.")
 
     if submitted:
         creds = load_credentials()
@@ -949,6 +994,168 @@ def monthly_diff_fig(entries, threshold_pct, height=240):
     return fig
 
 
+def build_insights(df, prev_entry, threshold):
+    """Plain-language findings for the month, most important first.
+    Returns (match_rate 0..1, [(tone, html_text), ...]) where tone is good | warn | bad."""
+    n = len(df)
+    match_rate = (df["Severity"] == "ok").sum() / n if n else 0.0
+    flagged_df = df[df["Action"] != "No action needed"]
+    total_gps, total_mis = df["Total GPS"].sum(), df["Total MIS"].sum()
+    net = total_mis - total_gps
+    pct = (net / total_gps) if total_gps else 0.0
+    items = []
+
+    if abs(pct) * 100 > threshold:
+        side = "less" if net < 0 else "more"
+        items.append(("bad", f"MIS logs record <b>{abs(net):,.0f} km {side}</b> than GPS across the fleet "
+                             f"({pct*100:+.1f}%) — outside the ±{threshold}% limit."))
+    else:
+        items.append(("good", f"Fleet-wide, MIS and GPS agree within the ±{threshold}% limit ({pct*100:+.1f}%)."))
+
+    missing_mis = df[df["Action"] == "File missing MIS log"]
+    if len(missing_mis):
+        km = missing_mis["Total GPS"].sum()
+        share = (km / total_gps * 100) if total_gps else 0
+        items.append(("bad", f"<b>{len(missing_mis)} vehicles</b> moved <b>{km:,.0f} km</b> on GPS with no MIS entry "
+                             f"({share:.0f}% of all GPS km) — follow up with site log-keepers."))
+
+    no_gps = df[df["Action"] == "Check GPS device"]
+    if len(no_gps):
+        items.append(("warn", f"<b>{len(no_gps)} vehicles</b> show MIS km but no GPS signal — check the devices are fitted and reporting."))
+
+    over_report = df[df["Action"] == "Audit MIS entries"]
+    if len(over_report):
+        items.append(("warn", f"<b>{len(over_report)} vehicles</b> have MIS km well above GPS — audit trip sheets and claims."))
+
+    if len(flagged_df):
+        by_site = flagged_df.groupby("Site").size().sort_values(ascending=False)
+        top_site, top_n = by_site.index[0], int(by_site.iloc[0])
+        site_total = int((df["Site"] == top_site).sum())
+        items.append(("warn", f"<b>{top_site}</b> needs the most attention: {top_n} of its {site_total} vehicles are flagged."))
+
+    if prev_entry and isinstance(prev_entry.get("flagged"), (int, float)):
+        before, now = int(prev_entry["flagged"]), len(flagged_df)
+        if now != before:
+            tone = "bad" if now > before else "good"
+            items.append((tone, f"Flagged vehicles went <b>{'up' if now > before else 'down'} from {before} to {now}</b> "
+                                f"compared with {prev_entry['label']}."))
+    return match_rate, items[:6]
+
+
+def render_insights(df, prev_entry, threshold, month_label):
+    """Reconciliation score ring + key findings list, shown on the Overview page."""
+    match_rate, items = build_insights(df, prev_entry, threshold)
+    n = len(df)
+    ok = int((df["Severity"] == "ok").sum())
+    ring = COLOR_OK if match_rate >= 0.8 else (COLOR_WARN if match_rate >= 0.6 else COLOR_CRIT)
+    tone_color = {"good": COLOR_OK, "warn": COLOR_WARN, "bad": COLOR_CRIT}
+    rows = "".join(
+        f"<div class='insight-row'><span class='insight-dot' style='background:{tone_color[t]};'></span>"
+        f"<span class='insight-text'>{txt}</span></div>"
+        for t, txt in items
+    )
+    st.markdown(
+        f"<div class='insight-card'>"
+        f"<div class='score'><div class='score-ring' style='--p:{match_rate*100:.1f}; --c:{ring};'>"
+        f"<div class='score-inner'><div class='score-val'>{match_rate*100:.0f}%</div><div class='score-lbl'>matched</div></div></div>"
+        f"<div class='score-cap'>Reconciliation score</div>"
+        f"<div class='score-sub'>{ok} of {n} vehicles agree within tolerance</div></div>"
+        f"<div class='insight-body'><div class='insight-title'>Key findings — {month_label}</div>{rows}</div>"
+        f"</div>",
+        unsafe_allow_html=True,
+    )
+
+
+@st.cache_data(show_spinner=False)
+def build_excel_report(df, month_label, threshold, generated_at):
+    """Management-ready workbook: Summary (+ key findings), Action plan, Sites, All vehicles."""
+    from openpyxl.styles import Alignment, Font, PatternFill
+    from openpyxl.utils import get_column_letter
+
+    site = compute_site_summary(df, threshold)
+    total_gps, total_mis = df["Total GPS"].sum(), df["Total MIS"].sum()
+    match_rate, findings = build_insights(df, None, threshold)
+    flagged = df[df["Action"] != "No action needed"].copy()
+
+    summary = pd.DataFrame([
+        ("Company", COMPANY_NAME), ("Report", "GPS vs MIS fleet reconciliation"), ("Month", month_label),
+        ("Flag limit", f"±{threshold}%"), ("Total GPS km", round(total_gps, 1)), ("Total MIS km", round(total_mis, 1)),
+        ("Net difference (MIS − GPS) km", round(total_mis - total_gps, 1)),
+        ("Net difference %", ((total_mis - total_gps) / total_gps) if total_gps else 0),
+        ("Vehicles", len(df)), ("Sites", df["Site"].nunique()), ("Flagged vehicles", len(flagged)),
+        ("Reconciliation score (vehicles matched)", match_rate), ("Generated", generated_at),
+    ], columns=["Item", "Value"])
+
+    sev_rank = {s: i for i, s in enumerate(SEVERITY_ORDER)}
+    flagged["_r"] = flagged["Severity"].map(sev_rank)
+    flagged["_a"] = flagged["Diff %"].abs()
+    action_plan = flagged.sort_values(["_r", "_a"], ascending=[True, False])[
+        ["Vehicle", "Site", "Total GPS", "Total MIS", "Diff", "Diff %", "Action", "ActionDetail"]
+    ].rename(columns={"Diff": "Diff km", "ActionDetail": "What to do"})
+    sites = site.assign(Status=site["Severity"].map(STATUS_LABEL)).drop(columns=["Severity"]).rename(
+        columns={"Total_GPS": "Total GPS", "Total_MIS": "Total MIS"})
+    vehicles = df.sort_values("Diff %", key=abs, ascending=False)[
+        ["Vehicle", "Site", "Total GPS", "Total MIS", "Diff", "Diff %", "Action", "Source"]
+    ].rename(columns={"Diff": "Diff km"})
+
+    header_fill = PatternFill("solid", fgColor="13317A")
+    header_font = Font(bold=True, color="FFFFFF")
+    buf = io.BytesIO()
+    with pd.ExcelWriter(buf, engine="openpyxl") as xw:
+        for name, frame in (("Summary", summary), ("Action plan", action_plan), ("Sites", sites), ("All vehicles", vehicles)):
+            frame.to_excel(xw, sheet_name=name, index=False)
+            ws = xw.sheets[name]
+            ws.freeze_panes = "A2"
+            for cell in ws[1]:
+                cell.fill, cell.font = header_fill, header_font
+                cell.alignment = Alignment(vertical="center")
+            for idx, col in enumerate(frame.columns, start=1):
+                letter = get_column_letter(idx)
+                width = max([len(str(col))] + [len(str(v)) for v in frame[col].head(300)]) + 2
+                ws.column_dimensions[letter].width = min(width, 70)
+                if name == "Summary":
+                    continue
+                fmt = "0.0%" if "%" in str(col) else ("#,##0.0" if ("km" in str(col) or "Total" in str(col)) else None)
+                if fmt:
+                    for cell in ws[letter][1:]:
+                        cell.number_format = fmt
+        ws = xw.sheets["Summary"]
+        for row in ws.iter_rows(min_row=2):
+            item = str(row[0].value)
+            if item.endswith("%") or item.startswith("Reconciliation"):
+                row[1].number_format = "0.0%"
+            elif "km" in item:
+                row[1].number_format = "#,##0.0"
+        start = len(summary) + 3
+        ws.cell(row=start, column=1, value="Key findings").font = Font(bold=True, size=12)
+        for i, (_, txt) in enumerate(findings, start=1):
+            ws.cell(row=start + i, column=1, value="• " + re.sub(r"<[^>]+>", "", txt))
+    return buf.getvalue()
+
+
+def report_download_button(key):
+    month_label = st.session_state.month_label
+    data = build_excel_report(st.session_state.df, month_label, st.session_state.threshold,
+                              datetime.now().strftime("%d %b %Y"))
+    st.download_button(
+        "⬇  Download Excel report", data=data,
+        file_name=f"GPS_vs_MIS_Report_{month_label.replace(' ', '_')}.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        use_container_width=True, key=key,
+    )
+
+
+def render_footer():
+    st.markdown(
+        f"<div class='app-footer'>"
+        f"<span><b>{COMPANY_NAME}</b> · GPS vs MIS Fleet Reconciliation</span>"
+        f"<span>Confidential — for internal use only · Report for {st.session_state.get('month_label', '—')} · "
+        f"Generated {datetime.now().strftime('%d %b %Y, %H:%M')}</span>"
+        f"</div>",
+        unsafe_allow_html=True,
+    )
+
+
 def page_overview():
     df = st.session_state.df
     daily_df = st.session_state.daily_df
@@ -1002,6 +1209,8 @@ def page_overview():
         st.caption(f"Trend lines in the cards show the last {len(past)} saved months, ending with {past[-1]['label']}.")
 
     st.write("")
+    render_insights(df, prev_entry, threshold, st.session_state.month_label)
+
     if has_daily:
         with st.container(border=True, key="card_1"):
             card_header("Day-wise kilometres, whole fleet", "Total km recorded each day by GPS and logged in MIS",
@@ -1305,4 +1514,9 @@ pg = st.navigation([
     st.Page(page_drilldown, title="Vehicle Drill-down", icon="🔍", url_path="drilldown"),
     st.Page(page_history, title="Monthly History", icon="📅", url_path="history"),
 ])
+with st.sidebar:
+    st.markdown("#### Report")
+    report_download_button("dl_sidebar")
+
 pg.run()
+render_footer()
