@@ -609,11 +609,6 @@ with st.sidebar:
         st.session_state.authenticated = False
         st.rerun()
 
-    st.caption(
-        "Light / Dark mode: use the **⋮ menu (top right)** → choose **Light** or **Dark**. "
-        "Refresh the page once afterward so every panel picks up the new theme."
-    )
-
     with st.expander("🔑 Change password"):
         if using_cloud_secrets():
             st.info(
