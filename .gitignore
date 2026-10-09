@@ -1,7 +1,6 @@
 # Sensitive/local files — never commit these
 .streamlit/credentials.json
 .streamlit/secrets.toml
-.streamlit/logo.png
 history.json
 credentials.json
 

@@ -17,6 +17,7 @@ Share the Network URL with your team - it only works for people on the same
 office Wi-Fi / LAN, never reaches the public internet.
 """
 
+import base64
 import io
 import json
 import re
@@ -574,22 +575,29 @@ if not check_login():
     st.stop()
 
 # Streamlit always renders the page navigation above st.sidebar content, so
-# the logo goes through st.logo and the company name is injected as a
-# heading at the top of the navigation block via CSS.
-if LOGO_PATH.exists():
-    st.logo(str(LOGO_PATH), size="large")
+# the logo and company name are injected at the top of the navigation block
+# via CSS: the logo (embedded as a data URI) sits on a white tile above the name.
 _company_css = COMPANY_NAME.replace("\\", "\\\\").replace('"', '\\"')
+_logo_css = ""
+if LOGO_PATH.exists():
+    _logo_b64 = base64.b64encode(LOGO_PATH.read_bytes()).decode()
+    _logo_css = (
+        f"background: #FFFFFF url('data:image/png;base64,{_logo_b64}') no-repeat center 10px / auto 116px;"
+        "padding-top: 138px !important; border-radius: 14px; border: 1px solid rgba(128,128,128,0.18);"
+        "padding-bottom: 14px !important; color: #0F172A !important;"
+    )
 st.markdown(
     f"""<style>
     [data-testid="stSidebarNav"]::before {{
         content: "{_company_css}";
         display: block;
-        font-size: 1.25rem;
+        text-align: center;
+        font-size: 1.15rem;
         font-weight: 700;
         line-height: 1.3;
         padding: 0 0.5rem 1rem;
-        margin-bottom: 0.5rem;
-        border-bottom: 1px solid rgba(128, 128, 128, 0.25);
+        margin-bottom: 1rem;
+        {_logo_css}
     }}
     </style>""",
     unsafe_allow_html=True,
