@@ -131,7 +131,7 @@ p, label, span, div {{ font-size: 15px; font-weight: 400; }}
     background: color-mix(in srgb, var(--accent) 13%, transparent);
 }}
 .kpi-label {{ color: {COLOR_MUTED}; font-size: 12px; letter-spacing: 0.7px; text-transform: uppercase; font-weight: 600; margin-bottom: 6px; }}
-.kpi-value {{ color: {COLOR_TEXT}; font-family: 'Inter', sans-serif; font-variant-numeric: tabular-nums; font-size: 30px; font-weight: 700; margin-bottom: 10px; white-space: nowrap; letter-spacing: -0.5px; }}
+.kpi-value {{ color: {COLOR_TEXT}; font-family: 'Inter', sans-serif; font-variant-numeric: tabular-nums; font-size: 22px; font-weight: 700; margin-bottom: 10px; white-space: nowrap; letter-spacing: -0.3px; }}
 .kpi-delta {{ display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 20px; font-variant-numeric: tabular-nums; }}
 
 .action-card {{
@@ -348,18 +348,36 @@ if not check_login():
 # name. To change the logo, replace the file at .streamlit/logo.png.
 COMPANY_NAME = "Supreme Facility Management Limited"
 
-with st.sidebar:
-    if LOGO_PATH.exists():
-        st.image(str(LOGO_PATH), width=100)
-    st.markdown(f"### {COMPANY_NAME}")
+# Streamlit always renders the page navigation above st.sidebar content, so
+# the logo goes through st.logo and the company name is injected as a
+# heading at the top of the navigation block via CSS.
+if LOGO_PATH.exists():
+    st.logo(str(LOGO_PATH), size="large")
+_company_css = COMPANY_NAME.replace("\\", "\\\\").replace('"', '\\"')
+st.markdown(
+    f"""<style>
+    [data-testid="stSidebarNav"]::before {{
+        content: "{_company_css}";
+        display: block;
+        font-size: 1.25rem;
+        font-weight: 700;
+        line-height: 1.3;
+        padding: 0 0.5rem 1rem;
+        margin-bottom: 0.5rem;
+        border-bottom: 1px solid rgba(128, 128, 128, 0.25);
+    }}
+    </style>""",
+    unsafe_allow_html=True,
+)
 
+with st.sidebar:
     st.caption(f"Logged in as **{st.session_state.get('current_username', 'admin')}**")
     if st.button("Log out"):
         st.session_state.authenticated = False
         st.rerun()
 
     st.caption(
-        "🎨 Light / Dark mode: use the **⋮ menu (top right)** → choose **Light** or **Dark**. "
+        "Light / Dark mode: use the **⋮ menu (top right)** → choose **Light** or **Dark**. "
         "Refresh the page once afterward so every panel picks up the new theme."
     )
 
