@@ -142,6 +142,11 @@ p, label, span, div {{ font-size: 15px; font-weight: 400; }}
     color: #FFFFFF !important; font-size: 13px !important; font-weight: 600 !important; white-space: nowrap;
 }}
 .brand-hero .hero-chip svg {{ width: 15px; height: 15px; }}
+.brand-hero .hero-logo {{
+    position: relative; z-index: 1; background: #FFFFFF; border-radius: 14px; padding: 10px 18px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.18); display: flex; align-items: center;
+}}
+.brand-hero .hero-logo img {{ height: 84px; width: auto; display: block; }}
 
 /* ---------- KPI cards ---------- */
 .kpi-card {{
@@ -584,7 +589,7 @@ def save_branding(data):
 # ---------------------------------------------------------------------------
 # Brand header band (shown at the top of every page, and on the login screen)
 # ---------------------------------------------------------------------------
-def render_brand_header(title="GPS vs MIS Dashboard", subtitle=None):
+def render_brand_header(title="GPS vs MIS Dashboard", subtitle=None, show_logo=False):
     def chip(icon, text):
         return f"<span class='hero-chip'>{icon_svg(icon)}{text}</span>"
 
@@ -595,12 +600,16 @@ def render_brand_header(title="GPS vs MIS Dashboard", subtitle=None):
         if st.session_state.get("threshold") is not None:
             chips += chip("sliders", f"Flag limit ±{st.session_state.threshold}%")
     sub_html = f"<div class='hero-sub'>{subtitle}</div>" if subtitle else ""
+    right_html = f"<div class='hero-chips'>{chips}</div>"
+    if show_logo and LOGO_PATH.exists():
+        logo_b64 = base64.b64encode(LOGO_PATH.read_bytes()).decode()
+        right_html = f"<div class='hero-logo'><img src='data:image/png;base64,{logo_b64}' alt='{COMPANY_NAME} logo'></div>"
     st.markdown(
         f"<div class='brand-hero'>"
         f"<div style='position:relative; z-index:1;'>"
         f"<div class='hero-eyebrow'>{COMPANY_NAME} · Fleet telemetry reconciliation</div>"
         f"<div class='hero-title'>{title}</div>{sub_html}</div>"
-        f"<div class='hero-chips'>{chips}</div>"
+        f"{right_html}"
         f"</div>",
         unsafe_allow_html=True,
     )
@@ -613,7 +622,8 @@ def check_login():
     if st.session_state.get("authenticated"):
         return True
 
-    render_brand_header("GPS vs MIS Fleet Dashboard", "Sign in with your admin account to view this month's reconciliation.")
+    render_brand_header("GPS vs MIS Fleet Dashboard", "Sign in with your admin account to view this month's reconciliation.",
+                        show_logo=True)
     _, mid, _ = st.columns([1, 1.3, 1])
     with mid:
         st.markdown("#### Admin login")
