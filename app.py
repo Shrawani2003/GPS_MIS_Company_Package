@@ -313,6 +313,11 @@ p, label, span, div {{ font-size: 15px; font-weight: 400; }}
 .stDownloadButton button p {{ color: {COLOR_VEHICLES} !important; font-weight: 600 !important; font-size: 14px !important; }}
 .stDownloadButton button:hover {{ background: color-mix(in srgb, {COLOR_VEHICLES} 8%, {COLOR_CARD}) !important; }}
 
+/* Danger action (delete all saved months) */
+.st-key-clear_all_history button {{ background: {COLOR_CRIT} !important; }}
+.st-key-clear_all_history button:hover {{ background: color-mix(in srgb, {COLOR_CRIT} 85%, black) !important; }}
+.st-key-clear_all_history button:disabled {{ opacity: 0.45; }}
+
 /* Footer */
 .app-footer {{
     margin-top: 36px; padding: 18px 4px 6px; border-top: 1px solid {COLOR_BORDER};
@@ -832,7 +837,10 @@ def get_previous_entry(hist, current_key):
 with st.sidebar:
     st.markdown("---")
     st.markdown("#### Data")
-    uploaded = st.file_uploader("Drop this month's file here (needs GPS and MIS sheets)", type=["xlsx", "xls"])
+    uploaded = st.file_uploader(
+        "Drop this month's file here (needs GPS and MIS sheets)", type=["xlsx", "xls"],
+        key=f"uploader_{st.session_state.get('uploader_version', 0)}",
+    )
 
 hist = load_history()
 sorted_hist_entries = sorted(hist.values(), key=lambda x: x["key"], reverse=True)
@@ -1563,13 +1571,26 @@ def page_history():
         use_container_width=True, hide_index=True,
     )
 
-    with st.expander("Remove a saved month"):
+    with st.expander("🗑️ Manage saved months"):
+        st.markdown("**Remove one month**")
         del_choice = st.selectbox("Month to remove", [e["label"] for e in sorted_entries])
         if st.button("Delete this month from history"):
             key_to_delete = next(e["key"] for e in sorted_entries if e["label"] == del_choice)
             del hist[key_to_delete]
             save_history(hist)
             st.success(f"Removed {del_choice}. Refresh the page to see the updated list.")
+
+        st.divider()
+        st.markdown("**Delete ALL saved months**")
+        st.caption(f"Permanently removes all {len(sorted_entries)} saved month(s) and empties the upload box, "
+                   "so you can start fresh with the current data. This cannot be undone.")
+        confirm_all = st.checkbox("Yes, I want to delete all saved months", key="confirm_clear_all")
+        if st.button("Delete all saved months", disabled=not confirm_all, key="clear_all_history"):
+            save_history({})
+            st.session_state.uploader_version = st.session_state.get("uploader_version", 0) + 1
+            st.session_state.pop("confirm_clear_all", None)
+            st.toast("All saved months deleted — upload the current month's file in the sidebar.", icon="🗑️")
+            st.rerun()
 
 
 # ---------------------------------------------------------------------------
