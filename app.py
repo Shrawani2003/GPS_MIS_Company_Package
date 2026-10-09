@@ -622,21 +622,57 @@ def check_login():
     if st.session_state.get("authenticated"):
         return True
 
-    render_brand_header("GPS vs MIS Fleet Dashboard", "Sign in with your admin account to view this month's reconciliation.",
-                        show_logo=True)
-    _, mid, _ = st.columns([1, 1.3, 1])
+    # Login screen: no sidebar, one centred card — logo, company, title, form.
+    logo_html = ""
+    if LOGO_PATH.exists():
+        logo_b64 = base64.b64encode(LOGO_PATH.read_bytes()).decode()
+        logo_html = (f"<div class='login-logo'><img src='data:image/png;base64,{logo_b64}' "
+                     f"alt='{COMPANY_NAME} logo'></div>")
+    st.markdown(
+        f"""<style>
+        [data-testid="stSidebar"], [data-testid="stSidebarCollapsedControl"],
+        [data-testid="stExpandSidebarButton"] {{ display: none !important; }}
+        .st-key-login_card {{
+            background: {COLOR_CARD}; border: 1px solid {COLOR_BORDER}; border-top: 4px solid #13317A;
+            border-radius: 18px; padding: 30px 32px 20px !important; margin-top: 4vh;
+            box-shadow: 0 2px 4px {SHADOW_SM}, 0 18px 40px {SHADOW_LG};
+        }}
+        .login-head {{ text-align: center; margin-bottom: 8px; }}
+        .login-logo {{ display: inline-block; background: #FFFFFF; border-radius: 12px; padding: 6px 14px; }}
+        .login-logo img {{ height: 92px; width: auto; display: block; }}
+        .login-company {{ color: {COLOR_MUTED} !important; font-size: 12px !important; font-weight: 700 !important;
+                          letter-spacing: 1.4px; text-transform: uppercase; margin-top: 14px; }}
+        .login-title {{ color: {COLOR_TEXT} !important; font-size: 24px !important; font-weight: 750 !important;
+                        letter-spacing: -0.4px; margin-top: 4px; }}
+        .login-sub {{ color: {COLOR_MUTED} !important; font-size: 14px !important; margin-top: 4px; }}
+        .login-divider {{ height: 1px; background: {COLOR_BORDER}; margin: 18px 0 6px; }}
+        .login-note {{ text-align: center; color: {COLOR_MUTED} !important; font-size: 12.5px !important; margin-top: 10px; }}
+        </style>""",
+        unsafe_allow_html=True,
+    )
+    _, mid, _ = st.columns([1, 1.15, 1])
     with mid:
-        st.markdown("#### Admin login")
-        with st.form("login_form"):
-            username = st.text_input("Username")
-            password = st.text_input("Password", type="password")
-            submitted = st.form_submit_button("Log in", use_container_width=True)
-        st.caption("🔒 Confidential — for authorised Supreme Facility Management staff only.")
+        with st.container(key="login_card"):
+            st.markdown(
+                f"<div class='login-head'>{logo_html}"
+                f"<div class='login-company'>{COMPANY_NAME}</div>"
+                f"<div class='login-title'>GPS vs MIS Fleet Dashboard</div>"
+                f"<div class='login-sub'>Sign in with your admin account to continue</div>"
+                f"<div class='login-divider'></div></div>",
+                unsafe_allow_html=True,
+            )
+            with st.form("login_form", border=False):
+                username = st.text_input("Username")
+                password = st.text_input("Password", type="password")
+                submitted = st.form_submit_button("Log in", use_container_width=True)
+            messages = st.container()
+            st.markdown("<div class='login-note'>🔒 Confidential — for authorised staff only</div>",
+                        unsafe_allow_html=True)
 
     if submitted:
         creds = load_credentials()
         if not creds:
-            st.error(
+            messages.error(
                 "No admin credentials configured yet. Run start.bat again, or copy "
                 "`.streamlit/credentials.example.json` to `.streamlit/credentials.json` "
                 "and set your own username/password (see README.md)."
@@ -647,7 +683,7 @@ def check_login():
             st.session_state.current_username = username
             st.rerun()
         else:
-            st.error("Incorrect username or password.")
+            messages.error("Incorrect username or password.")
     return False
 
 
