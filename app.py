@@ -27,6 +27,7 @@ from pathlib import Path
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
+import streamlit.components.v1 as components
 from openpyxl import load_workbook
 
 st.set_page_config(page_title="GPS vs MIS Fleet Dashboard", layout="wide", page_icon="🚚", initial_sidebar_state="expanded")
@@ -453,6 +454,69 @@ def style_fig(fig, height, y_title=None, x_title=None, show_legend=False):
 
 
 PLOTLY_CONFIG = {"displayModeBar": False}
+
+
+# ---------------------------------------------------------------------------
+# Light / dark toggle — a small sun / moon tile pinned top-right, next to the
+# ⋮ menu. Streamlit has no Python API to change the viewer's theme, so the
+# click runs a tiny script that picks Light/Dark in Streamlit's own ⋮ menu
+# (which also remembers the choice in the browser) and then presses a hidden
+# button to rerun the app, so our cards and charts redraw in the new palette.
+# ---------------------------------------------------------------------------
+st.markdown(f"""
+<style>
+.st-key-theme_toggle {{
+    position: fixed; top: 0.6rem; right: 3.6rem; z-index: 999991; width: auto !important;
+}}
+.st-key-theme_toggle button {{
+    width: 40px !important; height: 40px !important; min-height: 40px !important; padding: 0 !important;
+    border-radius: 11px !important; font-size: 19px !important; line-height: 1 !important;
+    background: {"#1C2740" if _IS_DARK else "#EEF0F7"} !important;
+    border: 1px solid {COLOR_BORDER} !important; box-shadow: 0 1px 2px {SHADOW_SM} !important;
+}}
+.st-key-theme_toggle button p {{ font-size: 19px !important; line-height: 1 !important; color: inherit !important; }}
+.st-key-theme_toggle button:hover {{
+    background: {"#24314F" if _IS_DARK else "#E2E6F2"} !important; transform: translateY(-1px);
+}}
+.st-key-theme_sync {{ display: none !important; }}
+[data-testid="stElementContainer"]:has(iframe[height="0"]) {{ display: none !important; }}
+</style>
+""", unsafe_allow_html=True)
+
+_target_theme = "Light" if _IS_DARK else "Dark"
+with st.container(key="theme_toggle"):
+    _toggle_clicked = st.button(
+        "☀️" if _IS_DARK else "🌙", key="theme_toggle_btn",
+        help=f"Switch to {_target_theme.lower()} mode",
+    )
+with st.container(key="theme_sync"):
+    st.button("sync theme", key="theme_sync_btn")
+
+if _toggle_clicked:
+    components.html(f"""
+<script>
+(function () {{
+  const d = window.parent.document;
+  const target = "{_target_theme}";
+  function rerun() {{
+    const sync = d.querySelector('.st-key-theme_sync button');
+    if (sync) sync.click();
+  }}
+  function pick(attempt) {{
+    const item = d.querySelector('[data-testid="stMainMenuItem-theme-' + target + '"]');
+    if (item) {{
+      item.click();
+      d.body.dispatchEvent(new KeyboardEvent('keydown', {{key: 'Escape', bubbles: true}}));
+      setTimeout(rerun, 150);
+    }} else if (attempt < 20) {{
+      setTimeout(function () {{ pick(attempt + 1); }}, 50);
+    }}
+  }}
+  const menu = d.querySelector('[data-testid="stMainMenu"] button') || d.querySelector('[data-testid="stMainMenu"]');
+  if (menu) {{ menu.click(); pick(0); }}
+}})();
+</script>
+""", height=0)
 
 
 
