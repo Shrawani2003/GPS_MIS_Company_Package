@@ -157,6 +157,11 @@ p, label, span, div {{ font-size: 15px; font-weight: 400; }}
     transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
     display: flex; flex-direction: column; min-height: 220px; box-sizing: border-box;
 }}
+.kpi-card.compact {{ min-height: 174px; }}
+.section-title {{ color: {COLOR_TEXT} !important; font-size: 18px !important; font-weight: 650 !important;
+                  letter-spacing: -0.2px; margin: 18px 0 2px; }}
+.section-sub {{ color: {COLOR_MUTED} !important; font-size: 13px !important; margin-bottom: 10px; }}
+.st-key-flagged_only {{ padding-top: 2.05rem; }}
 .kpi-card::before {{
     content: ""; position: absolute; left: 0; right: 0; top: 0; height: 3px; background: var(--accent);
 }}
@@ -394,7 +399,7 @@ def sparkline_svg(values, color):
 
 
 def kpi_card(container, icon, accent, label, value, unit=None, delta_text=None, delta_tone=None,
-             vs_text=None, spark=None, meter=None):
+             vs_text=None, spark=None, meter=None, compact=False):
     """Stat tile. delta_tone: 'good' | 'bad' | 'neutral'. spark: list of values. meter: 0..1 fill."""
     if delta_text:
         tone_color = {"good": COLOR_OK, "bad": COLOR_CRIT}.get(delta_tone, COLOR_MUTED)
@@ -415,7 +420,7 @@ def kpi_card(container, icon, accent, label, value, unit=None, delta_text=None, 
             f"<div class='kpi-meter-fill' style='width:{pct:.1f}%;'></div></div></div>"
         )
     container.markdown(
-        f"<div class='kpi-card' style='--accent:{accent};'>"
+        f"<div class='kpi-card{' compact' if compact else ''}' style='--accent:{accent};'>"
         f"<div class='kpi-head'><span class='kpi-label'>{label}</span>"
         f"<span class='kpi-icon'>{icon_svg(icon)}</span></div>"
         f"<div class='kpi-value'>{value}{unit_html}</div>"
@@ -437,6 +442,11 @@ def card_header(title, subtitle=None, legend=None):
         )
         html += f"<div class='legend-row'>{items}</div>"
     st.markdown(html, unsafe_allow_html=True)
+
+
+def section_title(title, subtitle=None):
+    sub = f"<div class='section-sub'>{subtitle}</div>" if subtitle else ""
+    st.markdown(f"<div class='section-title'>{title}</div>{sub}", unsafe_allow_html=True)
 
 
 def style_fig(fig, height, y_title=None, x_title=None, show_legend=False):
@@ -884,7 +894,8 @@ with st.sidebar:
     st.markdown("---")
     st.markdown("#### Data")
     uploaded = st.file_uploader(
-        "Drop this month's file here (needs GPS and MIS sheets)", type=["xlsx", "xls"],
+        "Upload monthly workbook", type=["xlsx", "xls"],
+        help="Excel file with two sheets named GPS and MIS (one row per vehicle, one column per day).",
         key=f"uploader_{st.session_state.get('uploader_version', 0)}",
     )
 
@@ -934,12 +945,15 @@ with st.sidebar:
                 for d in range(len(gvals)):
                     daily_rows.append({"Vehicle": veh, "Day": d + 1, "GPS": gvals[d], "MIS": mvals[d]})
             daily_df = pd.DataFrame(daily_rows)
-            st.caption(f"Viewing saved history for **{view_choice}** — including day-wise breakdown.")
+            st.caption(f"Saved month · **{view_choice}** · includes day-wise data")
         else:
             daily_df = pd.DataFrame(columns=["Vehicle", "Day", "GPS", "MIS"])
-            st.caption(f"Viewing saved history for **{view_choice}** — this month was saved before day-wise data was stored, so only totals are available.")
+            st.caption(f"Saved month · **{view_choice}** · totals only")
 
-    threshold = st.slider("Flag threshold (%)  — flag vehicles where |Diff %| exceeds this", 5, 100, 20, step=5)
+    threshold = st.slider(
+        "Flag limit (±%)", 5, 100, 20, step=5,
+        help="A vehicle or site is flagged when its MIS vs GPS difference is larger than this percentage.",
+    )
 
 action_info = df.apply(lambda r: classify(r, threshold), axis=1)
 df["Action"] = action_info.apply(lambda x: x[0])
@@ -970,12 +984,12 @@ if view_choice == "📤 Uploaded file":
     }
     save_history(hist)
     with st.sidebar:
-        st.caption(f"✓ Autosaved as **{month_label.strip()}** — {len(hist)} month(s) in history now.")
+        st.caption(f"✓ Saved as **{month_label.strip()}** · {len(hist)} month(s) in history")
 
 prev_entry = get_previous_entry(hist, month_key)
 
 with st.sidebar:
-    st.caption(f"Generated {datetime.now().strftime('%d %b %Y, %H:%M')} — runs entirely on your machine, nothing uploaded externally.")
+    st.caption(f"Last refreshed {datetime.now().strftime('%d %b %Y, %H:%M')}")
 
 # Make the prepared data available to every page.
 st.session_state.df = df
@@ -1321,7 +1335,7 @@ def page_overview():
     kpi_card(c4, "truck", COLOR_VEHICLES, "Vehicles", f"{len(df):,}",
              vs_text=f"across {n_sites} sites",
              spark=[e["vehicles"] for e in past] if has_trend else None)
-    kpi_card(c5, "flag", COLOR_FLAGGED, "Flagged vehicles", f"{flagged:,}",
+    kpi_card(c5, "flag", COLOR_FLAGGED, "Flagged", f"{flagged:,}",
              delta_text=f"{flagged/len(df)*100:.0f}% of fleet" if len(df) else None, delta_tone="bad" if flagged else "good",
              meter=(flagged / len(df)) if len(df) else 0)
 
@@ -1388,6 +1402,7 @@ def compute_site_summary(df, threshold):
 
 
 def page_sites():
+    card = lambda *a, **k: kpi_card(*a, compact=True, **k)
     df = st.session_state.df
     threshold = st.session_state.threshold
 
@@ -1399,14 +1414,14 @@ def page_sites():
     n_watch = int((site_summary["Severity"] == "watch").sum())
 
     c1, c2, c3, c4 = st.columns(4)
-    kpi_card(c1, "building", COLOR_VEHICLES, "Sites", f"{n_sites}", vs_text=f"{len(df):,} vehicles in total")
-    kpi_card(c2, "flag", COLOR_CRIT, "Outside limit", f"{n_crit}",
+    card(c1, "building", COLOR_VEHICLES, "Sites", f"{n_sites}", vs_text=f"{len(df):,} vehicles in total")
+    card(c2, "flag", COLOR_CRIT, "Outside limit", f"{n_crit}",
              delta_text=f"{n_crit/n_sites*100:.0f}% of sites" if n_sites else None, delta_tone="bad" if n_crit else "good",
              meter=(n_crit / n_sites) if n_sites else 0)
-    kpi_card(c3, "sliders", COLOR_WARN, "On watch", f"{n_watch}", vs_text=f"between ±{threshold/2:g}% and ±{threshold}%",
+    card(c3, "sliders", COLOR_WARN, "On watch", f"{n_watch}", vs_text=f"between ±{threshold/2:g}% and ±{threshold}%",
              meter=(n_watch / n_sites) if n_sites else 0)
     worst = site_summary.iloc[0] if n_sites else None
-    kpi_card(c4, "diff", COLOR_DIFF, "Largest difference",
+    card(c4, "diff", COLOR_DIFF, "Largest difference",
              f"{worst['Diff %']*100:+.1f}" if worst is not None else "—", unit="%" if worst is not None else None,
              vs_text=str(worst["Site"]) if worst is not None else None)
 
@@ -1441,12 +1456,12 @@ def page_sites():
         return [f"color: {color}; font-weight: 600;" if col == "Diff %" else "" for col in row.index]
 
     site_styled = (
-        site_summary.style
+        site_summary.rename(columns={"Total_GPS": "GPS km", "Total_MIS": "MIS km"}).style
         .apply(style_site_row, axis=1)
-        .format({"Total_GPS": "{:,.0f}", "Total_MIS": "{:,.0f}", "Diff %": "{:+.1%}"})
+        .format({"GPS km": "{:,.0f}", "MIS km": "{:,.0f}", "Diff %": "{:+.1%}"})
         .hide(axis="columns", subset=["Severity"])
     )
-    st.markdown("#### Site table")
+    section_title("Site table", "Every site, largest difference first")
     st.dataframe(site_styled, use_container_width=True, hide_index=True, column_config={"Severity": None})
 
 
@@ -1455,7 +1470,7 @@ def page_vehicles():
 
     render_brand_header("Vehicles", "Recommended corrective action for every vehicle — click a tile to filter the table.")
 
-    st.markdown("### Corrective actions")
+    section_title("Corrective actions", "Click a tile to show only those vehicles in the table below")
     order = ["Check GPS device", "File missing MIS log", "No data either side", "Audit MIS entries",
              "Verify unrecorded trips", "Keep an eye on it", "No action needed"]
     action_counts = df.groupby(["Action", "Severity"]).size().reset_index(name="Count")
@@ -1481,7 +1496,7 @@ def page_vehicles():
                         st.session_state.action_filter = "All" if is_active else row["Action"]
                         st.rerun()
 
-    st.markdown("### Vehicles")
+    section_title("Vehicle list")
     if st.session_state.action_filter != "All":
         fc1, fc2 = st.columns([5, 1])
         fc1.info(f"Filtered to action: **{st.session_state.action_filter}**")
@@ -1493,7 +1508,8 @@ def page_vehicles():
     site_options = ["All sites"] + sorted(df["Site"].unique().tolist())
     selected_site = col_a.selectbox("Site", site_options)
     search = col_b.text_input("Search vehicle no. or site")
-    only_flagged = col_c.checkbox("Flagged only")
+    with col_c.container(key="flagged_only"):
+        only_flagged = st.checkbox("Flagged only")
     action_filter = col_d.selectbox("Action", ["All"] + order, key="action_filter")
 
     view = df.copy()
@@ -1544,26 +1560,30 @@ def page_vehicles():
 
 
 def page_drilldown():
+    card = lambda *a, **k: kpi_card(*a, compact=True, **k)
     df = st.session_state.df
     daily_df = st.session_state.daily_df
     has_daily = st.session_state.has_daily
     threshold = st.session_state.threshold
 
     render_brand_header("Vehicle drill-down", "Month totals, recommended action and the day-by-day record for one vehicle.")
-    veh_pick = st.selectbox("Pick a vehicle", df["Vehicle"].tolist())
+    site_of = dict(zip(df["Vehicle"], df["Site"]))
+    pick_col, _ = st.columns([1, 1.6])
+    veh_pick = pick_col.selectbox("Pick a vehicle", df["Vehicle"].tolist(),
+                                  format_func=lambda v: f"{v}  ·  {site_of.get(v, '')}")
     if not veh_pick:
         return
     row = df[df["Vehicle"] == veh_pick].iloc[0]
     color = ACTION_COLORS[row["Severity"]]
 
     c1, c2, c3, c4 = st.columns(4)
-    kpi_card(c1, "gps", COLOR_GPS, "GPS km", f"{row['Total GPS']:,.1f}", vs_text=f"Site: {row['Site']}")
-    kpi_card(c2, "mis", COLOR_MIS, "MIS km", f"{row['Total MIS']:,.1f}", vs_text=f"Source: {row['Source']}")
+    card(c1, "gps", COLOR_GPS, "GPS km", f"{row['Total GPS']:,.1f}", vs_text=f"Site: {row['Site']}")
+    card(c2, "mis", COLOR_MIS, "MIS km", f"{row['Total MIS']:,.1f}", vs_text=f"Source: {row['Source']}")
     over = abs(row["Diff %"]) * 100 > threshold
-    kpi_card(c3, "diff", COLOR_DIFF, "Difference", f"{row['Diff %']*100:+.1f}", unit="%",
+    card(c3, "diff", COLOR_DIFF, "Difference", f"{row['Diff %']*100:+.1f}", unit="%",
              delta_text=f"{row['Diff']:+,.1f} km", delta_tone="bad" if over else "good",
              vs_text=f"{'Outside' if over else 'Within'} ±{threshold}% limit")
-    kpi_card(c4, "flag", color, "Status", STATUS_LABEL.get(row["Severity"], "—"), vs_text=row["Action"])
+    card(c4, "flag", color, "Status", STATUS_LABEL.get(row["Severity"], "—"), vs_text=row["Action"])
 
     st.markdown(
         f"<div class='action-card' style='border-left:4px solid {color}; margin-top:14px;'>"
