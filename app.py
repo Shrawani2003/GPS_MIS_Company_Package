@@ -1555,6 +1555,39 @@ def page_sites():
     section_title("Site table", "Every site, largest difference first")
     st.dataframe(site_styled, use_container_width=True, hide_index=True, column_config={"Severity": None})
 
+    render_site_monthwise(site_summary, threshold)
+
+
+def render_site_monthwise(site_summary, threshold):
+    """Month-wise GPS vs MIS for sites: a per-site chart, then the site x month table."""
+    section_title("Month-wise comparison", "GPS vs MIS km for each site across every saved month")
+    long, months = monthwise_long("Site")
+    if len(months) < 2 or long.empty:
+        st.info("Save at least two months to compare sites month by month.")
+        return
+    sites = sorted(long["Site"].unique().tolist())
+    pick_col, _ = st.columns([1, 1.6])
+    pick = pick_col.selectbox("Site", ["All sites"] + sites, key="mw_site_pick")
+    data = long if pick == "All sites" else long[long["Site"] == pick]
+    per_month = data.groupby("Month")[["GPS km", "MIS km"]].sum().reindex(months).fillna(0)
+    entries = [{"label": m, "total_gps": float(per_month.loc[m, "GPS km"]),
+                "total_mis": float(per_month.loc[m, "MIS km"])} for m in months]
+    left, right = st.columns([1.6, 1], gap="medium")
+    with left:
+        with st.container(border=True, key="card_site_mw_km"):
+            card_header(f"GPS vs MIS km by month — {pick}", "Total km recorded by GPS and logged in MIS",
+                        legend=[("GPS", COLOR_GPS), ("MIS", COLOR_MIS)])
+            st.plotly_chart(monthly_totals_fig(entries, 300), use_container_width=True,
+                            key="chart_site_mw_km", config=PLOTLY_CONFIG)
+    with right:
+        with st.container(border=True, key="card_site_mw_diff"):
+            card_header(f"Difference by month — {pick}", f"MIS vs GPS — dotted lines mark the ±{threshold}% limit",
+                        legend=[(STATUS_LABEL[s], STATUS_FILL[s]) for s in ("critical", "watch", "ok")])
+            st.plotly_chart(monthly_diff_fig(entries, threshold, 300), use_container_width=True,
+                            key="chart_site_mw_diff", config=PLOTLY_CONFIG)
+
+    render_monthwise_comparison(site_summary, threshold, by="Site")
+
 
 def page_vehicles():
     df = st.session_state.df
@@ -1652,23 +1685,37 @@ def page_vehicles():
     render_monthwise_comparison(view, st.session_state.threshold)
 
 
-def build_monthwise_table(vehicles, metric):
-    """One row per vehicle, one column per saved month (oldest -> newest) for the chosen metric.
-    metric: 'Diff %' | 'GPS km' | 'MIS km'. Returns (table, month_columns)."""
+def monthwise_long(by="Vehicle"):
+    """Saved months as long rows (by, Month, GPS km, MIS km, Diff %), oldest month first.
+    by='Site' sums the vehicles of each site. Returns (long_df, month_labels)."""
     entries = sorted(load_history().values(), key=lambda e: e["key"])
+    months = [short_month(e["label"]) for e in entries]
     rows = []
     for e in entries:
         month = short_month(e["label"])
         for r in e.get("vehicle_totals", []):
-            gps, mis = float(r.get("Total GPS") or 0), float(r.get("Total MIS") or 0)
-            rows.append({"Vehicle": r["Vehicle"], "Month": month, "GPS km": gps, "MIS km": mis,
-                         "Diff %": ((mis - gps) / gps * 100) if gps else (0.0 if mis == 0 else float("nan"))})
-    months = [short_month(e["label"]) for e in entries]
+            rows.append({"Vehicle": r["Vehicle"], "Site": r.get("Site") or "Unassigned", "Month": month,
+                         "GPS km": float(r.get("Total GPS") or 0), "MIS km": float(r.get("Total MIS") or 0)})
     if not rows:
         return pd.DataFrame(), months
     long = pd.DataFrame(rows)
-    wide = long.pivot_table(index="Vehicle", columns="Month", values=metric, aggfunc="first")
-    wide = wide.reindex(columns=months).reindex([v for v in vehicles if v in wide.index])
+    if by == "Site":
+        long = long.groupby(["Site", "Month"], as_index=False)[["GPS km", "MIS km"]].sum()
+    gps, mis = long["GPS km"], long["MIS km"]
+    diff = (mis - gps) / gps.replace(0, float("nan")) * 100   # no GPS km -> no %, shown as "—"
+    diff[(gps == 0) & (mis == 0)] = 0.0                         # nothing on either side -> 0%
+    long["Diff %"] = diff
+    return long, months
+
+
+def build_monthwise_table(keys, metric, by="Vehicle"):
+    """One row per vehicle (or site), one column per saved month (oldest -> newest).
+    metric: 'Diff %' | 'GPS km' | 'MIS km'. Returns (table, month_columns)."""
+    long, months = monthwise_long(by)
+    if long.empty:
+        return pd.DataFrame(), months
+    wide = long.pivot_table(index=by, columns="Month", values=metric, aggfunc="first", dropna=False)
+    wide = wide.reindex(columns=months).reindex([k for k in keys if k in wide.index])
     # Trend line skips months with no value (e.g. MIS km but zero GPS km).
     wide["Trend"] = wide[months].apply(lambda r: [round(float(x), 1) for x in r if not pd.isna(x)], axis=1)
     if len(months) >= 2:
@@ -1679,21 +1726,27 @@ def build_monthwise_table(vehicles, metric):
     return wide, months
 
 
-def render_monthwise_comparison(view, threshold):
-    section_title("Month-wise comparison",
-                  "Each vehicle across every saved month — follows the Site / Search / Action filters above")
+def render_monthwise_comparison(view, threshold, by="Vehicle"):
+    noun = "vehicles" if by == "Vehicle" else "sites"
+    if by == "Vehicle":
+        section_title("Month-wise comparison",
+                      "Each vehicle across every saved month — follows the Site / Search / Action filters above")
+    else:
+        section_title("Site comparison table", "Each site across every saved month")
     n_months = len(load_history())
     if n_months < 2:
-        st.info("Save at least two months to compare vehicles month by month.")
+        st.info(f"Save at least two months to compare {noun} month by month.")
         return
-    metric = st.radio("Show", ["Diff %", "GPS km", "MIS km"], horizontal=True, key="mw_metric",
+    metric = st.radio("Show", ["Diff %", "GPS km", "MIS km"], horizontal=True, key=f"mw_metric_{by}",
                       label_visibility="collapsed")
-    site_of = dict(zip(view["Vehicle"], view["Site"]))
-    table, months = build_monthwise_table(view["Vehicle"].tolist(), metric)
+    keys = view[by].tolist()
+    table, months = build_monthwise_table(keys, metric, by=by)
     if table.empty:
-        st.caption("No saved months contain these vehicles.")
+        st.caption(f"No saved months contain these {noun}.")
         return
-    table.insert(1, "Site", table["Vehicle"].map(site_of))
+    if by == "Vehicle":
+        site_of = dict(zip(view["Vehicle"], view["Site"]))
+        table.insert(1, "Site", table["Vehicle"].map(site_of))
 
     def diff_color(v):
         if pd.isna(v):
@@ -1734,7 +1787,7 @@ def render_monthwise_comparison(view, threshold):
     if "Change" in table.columns:
         config["Change"] = st.column_config.Column(
             f"Change vs {months[-2]}", help=f"{months[-1]} minus {months[-2]}")
-    st.caption(f"{len(table)} vehicles · {len(months)} months · "
+    st.caption(f"{len(table)} {noun} · {len(months)} months · "
                + ("colours use the ±%d%% flag limit" % threshold if metric == "Diff %" else "values in km"))
     st.dataframe(styler, use_container_width=True, hide_index=True, height=420, column_config=config)
 
