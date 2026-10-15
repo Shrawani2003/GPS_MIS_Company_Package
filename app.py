@@ -221,6 +221,12 @@ p, label, span, div {{ font-size: 15px; font-weight: 400; }}
 /* ---------- Chart cards ---------- */
 .card-title {{ color: {COLOR_TEXT} !important; font-size: 16px !important; font-weight: 650 !important; letter-spacing: -0.2px; }}
 .card-sub {{ color: {COLOR_MUTED} !important; font-size: 13px !important; margin-top: 2px; margin-bottom: 4px; }}
+.status-table {{ margin-top: 2px; }}
+.status-row {{ display: flex; align-items: center; gap: 10px; padding: 8px 2px; border-top: 1px solid {COLOR_BORDER}; }}
+.status-dot {{ width: 10px; height: 10px; border-radius: 3px; flex: none; }}
+.status-name {{ flex: 1; color: {COLOR_TEXT} !important; font-size: 14px !important; }}
+.status-count {{ color: {COLOR_TEXT} !important; font-size: 14px !important; font-weight: 650 !important; font-variant-numeric: tabular-nums; }}
+.status-pct {{ width: 44px; text-align: right; color: {COLOR_MUTED} !important; font-size: 13px !important; font-variant-numeric: tabular-nums; }}
 .legend-row {{ display: flex; gap: 16px; flex-wrap: wrap; margin-top: 6px; }}
 .legend-item {{ display: inline-flex; align-items: center; gap: 6px; color: {COLOR_MUTED} !important; font-size: 12.5px !important; font-weight: 500 !important; }}
 .legend-swatch {{ width: 10px; height: 10px; border-radius: 3px; display: inline-block; }}
@@ -1093,16 +1099,22 @@ def site_deviation_fig(site_summary, threshold_pct, height):
     t = float(threshold_pct)
     lo = min(data["pct"].min(), -t) if len(data) else -t
     hi = max(data["pct"].max(), t) if len(data) else t
-    pad = (hi - lo) * 0.18
-    fig.update_xaxes(range=[lo - pad, hi + pad], showgrid=True, gridcolor=CHART_GRID, ticksuffix="%")
+    span = hi - lo
+    # Outside value labels ("-100.0%") need room beyond the longest bar on each side.
+    fig.update_xaxes(range=[lo - span * (0.24 if lo < 0 else 0.06), hi + span * (0.22 if hi > 0 else 0.06)],
+                     showgrid=True, gridcolor=CHART_GRID, ticksuffix="%")
     fig.update_yaxes(showgrid=False, automargin=True, tickfont=dict(size=12.5, color=COLOR_TEXT))
     fig.add_vline(x=0, line=dict(color=CHART_AXIS, width=1))
     for x in (-t, t):
         fig.add_vline(x=x, line=dict(color=COLOR_MUTED, width=1, dash="dot"))
-    fig.add_annotation(x=t, y=1, yref="paper", yanchor="bottom", text=f"+{t:.0f}%", showarrow=False,
-                       font=dict(size=11, color=COLOR_MUTED))
-    fig.add_annotation(x=-t, y=1, yref="paper", yanchor="bottom", text=f"−{t:.0f}%", showarrow=False,
-                       font=dict(size=11, color=COLOR_MUTED))
+    if 2 * t < span * 0.12:   # limit lines too close together for two labels
+        fig.add_annotation(x=0, y=1, yref="paper", yanchor="bottom", text=f"±{t:.0f}% limit", showarrow=False,
+                           font=dict(size=11, color=COLOR_MUTED))
+    else:
+        fig.add_annotation(x=t, y=1, yref="paper", yanchor="bottom", text=f"+{t:.0f}%", showarrow=False,
+                           font=dict(size=11, color=COLOR_MUTED))
+        fig.add_annotation(x=-t, y=1, yref="paper", yanchor="bottom", text=f"−{t:.0f}%", showarrow=False,
+                           font=dict(size=11, color=COLOR_MUTED))
     fig.update_layout(margin=dict(l=4, r=16, t=24, b=4), bargap=0.32)
     return fig
 
@@ -1120,15 +1132,24 @@ def fleet_status_fig(df):
         hovertemplate="<b>%{label}</b><br>%{value} vehicles (%{percent})<extra></extra>",
     ))
     fig.update_layout(
-        plot_bgcolor=CHART_BG, paper_bgcolor=CHART_BG, height=250, margin=dict(l=0, r=0, t=6, b=6),
+        plot_bgcolor=CHART_BG, paper_bgcolor=CHART_BG, height=240, margin=dict(l=0, r=0, t=6, b=6),
         showlegend=False, font=dict(family="Inter, sans-serif"),
         hoverlabel=dict(bgcolor=COLOR_CARD, bordercolor=COLOR_BORDER, font=dict(family="Inter, sans-serif", size=13, color=COLOR_TEXT)),
         annotations=[
-            dict(text=f"<b>{flagged}</b>", x=0.5, y=0.55, showarrow=False, font=dict(size=30, color=COLOR_TEXT)),
-            dict(text="flagged", x=0.5, y=0.38, showarrow=False, font=dict(size=13, color=COLOR_MUTED)),
+            dict(text=f"<b>{flagged}</b>", x=0.5, y=0.58, showarrow=False, font=dict(size=30, color=COLOR_TEXT)),
+            dict(text="flagged", x=0.5, y=0.42, showarrow=False, font=dict(size=13, color=COLOR_MUTED)),
+            dict(text=f"of {len(df):,} vehicles", x=0.5, y=0.31, showarrow=False, font=dict(size=11.5, color=COLOR_MUTED)),
         ],
     )
-    return fig, [(f"{STATUS_LABEL[s]} · {int(counts[s])}", STATUS_FILL[s]) for s in sev]
+    total = max(len(df), 1)
+    rows = "".join(
+        f"<div class='status-row'><span class='status-dot' style='background:{STATUS_FILL[s]};'></span>"
+        f"<span class='status-name'>{STATUS_LABEL[s]}</span>"
+        f"<span class='status-count'>{int(counts.get(s, 0)):,}</span>"
+        f"<span class='status-pct'>{int(counts.get(s, 0)) / total * 100:.0f}%</span></div>"
+        for s in SEVERITY_ORDER
+    )
+    return fig, f"<div class='status-table'>{rows}</div>"
 
 
 def short_month(label):
@@ -1432,9 +1453,10 @@ def page_overview():
                             use_container_width=True, key="chart_overview_sites", config=PLOTLY_CONFIG)
     with right:
         with st.container(border=True, key="card_3"):
-            fig_status, legend = fleet_status_fig(df)
-            card_header("Fleet status", "Vehicles by recommended action", legend=legend)
+            fig_status, breakdown = fleet_status_fig(df)
+            card_header("Fleet status", "Vehicles by recommended action")
             st.plotly_chart(fig_status, use_container_width=True, key="chart_fleet_status", config=PLOTLY_CONFIG)
+            st.markdown(breakdown, unsafe_allow_html=True)
 
     all_months = sorted(load_history().values(), key=lambda e: e["key"])
     if len(all_months) >= 2:
