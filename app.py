@@ -1083,7 +1083,7 @@ def site_deviation_fig(site_summary, threshold_pct, height):
     fig = go.Figure(go.Bar(
         y=data["Site"], x=data["pct"], orientation="h",
         marker=dict(color=colors, cornerradius=4),
-        text=data["pct"].apply(lambda v: f"{v:+.1f}%"), textposition="outside", cliponaxis=False,
+        text=data["pct"].apply(lambda v: f"{v:+.1f}%"), textposition="outside", cliponaxis=False, constraintext="none",
         textfont=dict(size=12, color=COLOR_TEXT, family="Inter, sans-serif"),
         customdata=list(zip(data["Total_GPS"], data["Total_MIS"], data["Severity"].map(STATUS_LABEL))),
         hovertemplate="<b>%{y}</b><br>Diff: %{x:+.1f}%<br>GPS: %{customdata[0]:,.0f} km"
@@ -1099,9 +1099,9 @@ def site_deviation_fig(site_summary, threshold_pct, height):
     fig.add_vline(x=0, line=dict(color=CHART_AXIS, width=1))
     for x in (-t, t):
         fig.add_vline(x=x, line=dict(color=COLOR_MUTED, width=1, dash="dot"))
-    fig.add_annotation(x=t, y=1, yref="paper", yanchor="bottom", text=f"+{t:.0f}% limit", showarrow=False,
+    fig.add_annotation(x=t, y=1, yref="paper", yanchor="bottom", text=f"+{t:.0f}%", showarrow=False,
                        font=dict(size=11, color=COLOR_MUTED))
-    fig.add_annotation(x=-t, y=1, yref="paper", yanchor="bottom", text=f"−{t:.0f}% limit", showarrow=False,
+    fig.add_annotation(x=-t, y=1, yref="paper", yanchor="bottom", text=f"−{t:.0f}%", showarrow=False,
                        font=dict(size=11, color=COLOR_MUTED))
     fig.update_layout(margin=dict(l=4, r=16, t=24, b=4), bargap=0.32)
     return fig
@@ -1131,9 +1131,17 @@ def fleet_status_fig(df):
     return fig, [(f"{STATUS_LABEL[s]} · {int(counts[s])}", STATUS_FILL[s]) for s in sev]
 
 
+def short_month(label):
+    """'September 2026' -> 'Sep 2026' so month axes stay horizontal on narrow screens."""
+    try:
+        return datetime.strptime(label.strip(), "%B %Y").strftime("%b %Y")
+    except ValueError:
+        return label
+
+
 def monthly_totals_fig(entries, height=300):
     """Grouped columns: total GPS vs MIS km per saved month."""
-    months = [e["label"] for e in entries]
+    months = [short_month(e["label"]) for e in entries]
     fig = go.Figure()
     for key, name, color in (("total_gps", "GPS", COLOR_GPS), ("total_mis", "MIS", COLOR_MIS)):
         fig.add_trace(go.Bar(
@@ -1154,13 +1162,13 @@ def monthly_diff_fig(entries, threshold_pct, height=240):
     for e in entries:
         p = ((e["total_mis"] - e["total_gps"]) / e["total_gps"]) if e["total_gps"] else 0
         sev = "critical" if abs(p) > t else ("watch" if abs(p) > t * 0.5 else "ok")
-        months.append(e["label"])
+        months.append(short_month(e["label"]))
         pcts.append(p * 100)
         colors.append(STATUS_FILL[sev])
         labels.append(STATUS_LABEL[sev])
     fig = go.Figure(go.Bar(
         x=months, y=pcts, marker=dict(color=colors, cornerradius=4),
-        text=[f"{v:+.1f}%" for v in pcts], textposition="outside", cliponaxis=False,
+        text=[f"{v:+.1f}%" for v in pcts], textposition="outside", cliponaxis=False, constraintext="none",
         textfont=dict(size=12, color=COLOR_TEXT), customdata=labels,
         hovertemplate="<b>%{x}</b><br>Diff: %{y:+.1f}%<br>Status: %{customdata}<extra></extra>",
     ))
@@ -1677,19 +1685,16 @@ def page_history():
     } for e in sorted_entries])
 
     threshold = st.session_state.threshold
-    left, right = st.columns([1.5, 1], gap="medium")
-    with left:
-        with st.container(border=True, key="card_8"):
-            card_header("Total kilometres by month", "GPS vs MIS km for each saved month",
-                        legend=[("GPS", COLOR_GPS), ("MIS", COLOR_MIS)])
-            st.plotly_chart(monthly_totals_fig(sorted_entries, 300), use_container_width=True,
-                            key="chart_monthly_history", config=PLOTLY_CONFIG)
-    with right:
-        with st.container(border=True, key="card_9"):
-            card_header("Overall difference by month", f"MIS vs GPS — dotted lines mark the ±{threshold}% limit",
-                        legend=[(STATUS_LABEL[s], STATUS_FILL[s]) for s in ("critical", "watch", "ok")])
-            st.plotly_chart(monthly_diff_fig(sorted_entries, threshold, 300), use_container_width=True,
-                            key="chart_monthly_diff", config=PLOTLY_CONFIG)
+    with st.container(border=True, key="card_8"):
+        card_header("Total kilometres by month", "GPS vs MIS km for each saved month",
+                    legend=[("GPS", COLOR_GPS), ("MIS", COLOR_MIS)])
+        st.plotly_chart(monthly_totals_fig(sorted_entries, 320), use_container_width=True,
+                        key="chart_monthly_history", config=PLOTLY_CONFIG)
+    with st.container(border=True, key="card_9"):
+        card_header("Overall difference by month", f"MIS vs GPS — dotted lines mark the ±{threshold}% limit",
+                    legend=[(STATUS_LABEL[s], STATUS_FILL[s]) for s in ("critical", "watch", "ok")])
+        st.plotly_chart(monthly_diff_fig(sorted_entries, threshold, 300), use_container_width=True,
+                        key="chart_monthly_diff", config=PLOTLY_CONFIG)
 
     st.dataframe(
         hist_df.style.format({"Total GPS": "{:,.0f}", "Total MIS": "{:,.0f}", "Diff %": "{:+.1%}"}),
