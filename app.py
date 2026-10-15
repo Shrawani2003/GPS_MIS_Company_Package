@@ -1335,6 +1335,22 @@ def render_footer():
     )
 
 
+def no_daily_notice():
+    """Explain why the day-wise chart is missing and how to get it back."""
+    month = st.session_state.get("month_label", "this month")
+    with_daily = [e["label"] for e in sorted(load_history().values(), key=lambda e: e["key"], reverse=True)
+                  if e.get("daily")]
+    available = (f" Months that already have it: <b>{', '.join(with_daily)}</b>." if with_daily else "")
+    st.markdown(
+        f"<div class='action-card' style='border-left:4px solid {COLOR_GPS}; margin-top:14px;'>"
+        f"<b>Day-wise chart not available for {month}</b><br>"
+        f"<span style='color:{COLOR_MUTED}; font-size:13.5px;'>This month was saved before day-by-day figures "
+        f"were stored, so only its totals are kept. Upload the {month} Excel file again in the sidebar to add "
+        f"the daily chart.{available}</span></div>",
+        unsafe_allow_html=True,
+    )
+
+
 def page_overview():
     df = st.session_state.df
     daily_df = st.session_state.daily_df
@@ -1421,7 +1437,7 @@ def page_overview():
                             key="chart_overview_months", config=PLOTLY_CONFIG)
 
     if not has_daily:
-        st.caption("The day-wise chart isn't available for this month — it was saved before daily figures were stored. Re-upload the file to add it.")
+        no_daily_notice()
 
 
 def compute_site_summary(df, threshold):
@@ -1642,7 +1658,7 @@ def page_drilldown():
             st.plotly_chart(daily_trend_fig(vd, value_fmt=",.1f"), use_container_width=True,
                             key="chart_vehicle_drilldown", config=PLOTLY_CONFIG)
     else:
-        st.caption("The day-wise chart isn't available for this month — it was saved before daily figures were stored.")
+        no_daily_notice()
 
 
 def page_history():
