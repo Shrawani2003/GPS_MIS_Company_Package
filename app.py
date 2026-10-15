@@ -1494,10 +1494,12 @@ def page_sites():
 
     st.write("")
     with st.container(border=True, key="card_5"):
-        card_header("Difference by site", f"MIS vs GPS km difference — dotted lines mark the ±{threshold}% flag limit",
+        card_header("Difference by site", f"MIS vs GPS km difference, largest at the top — dotted lines mark the "
+                    f"±{threshold}% flag limit · scroll inside the box to see all sites",
                     legend=[(STATUS_LABEL[s], STATUS_FILL[s]) for s in ("critical", "watch", "ok")])
-        st.plotly_chart(site_deviation_fig(site_summary, threshold, max(320, n_sites * 30 + 60)),
-                        use_container_width=True, key="chart_sites_diff", config=PLOTLY_CONFIG)
+        with st.container(height=440, border=False):
+            st.plotly_chart(site_deviation_fig(site_summary, threshold, max(320, n_sites * 30 + 60)),
+                            use_container_width=True, key="chart_sites_diff", config=PLOTLY_CONFIG)
 
     vol_sorted = site_summary.sort_values("Total_GPS", ascending=True)
     fig_vol = go.Figure()
