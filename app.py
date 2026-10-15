@@ -1572,19 +1572,17 @@ def render_site_monthwise(site_summary, threshold):
     per_month = data.groupby("Month")[["GPS km", "MIS km"]].sum().reindex(months).fillna(0)
     entries = [{"label": m, "total_gps": float(per_month.loc[m, "GPS km"]),
                 "total_mis": float(per_month.loc[m, "MIS km"])} for m in months]
-    left, right = st.columns([1.6, 1], gap="medium")
-    with left:
-        with st.container(border=True, key="card_site_mw_km"):
-            card_header(f"GPS vs MIS km by month — {pick}", "Total km recorded by GPS and logged in MIS",
-                        legend=[("GPS", COLOR_GPS), ("MIS", COLOR_MIS)])
-            st.plotly_chart(monthly_totals_fig(entries, 300), use_container_width=True,
-                            key="chart_site_mw_km", config=PLOTLY_CONFIG)
-    with right:
-        with st.container(border=True, key="card_site_mw_diff"):
-            card_header(f"Difference by month — {pick}", f"MIS vs GPS — dotted lines mark the ±{threshold}% limit",
-                        legend=[(STATUS_LABEL[s], STATUS_FILL[s]) for s in ("critical", "watch", "ok")])
-            st.plotly_chart(monthly_diff_fig(entries, threshold, 300), use_container_width=True,
-                            key="chart_site_mw_diff", config=PLOTLY_CONFIG)
+    # Full width and stacked: side by side, the difference chart gets too narrow on laptop screens.
+    with st.container(border=True, key="card_site_mw_km"):
+        card_header(f"GPS vs MIS km by month — {pick}", "Total km recorded by GPS and logged in MIS",
+                    legend=[("GPS", COLOR_GPS), ("MIS", COLOR_MIS)])
+        st.plotly_chart(monthly_totals_fig(entries, 320), use_container_width=True,
+                        key="chart_site_mw_km", config=PLOTLY_CONFIG)
+    with st.container(border=True, key="card_site_mw_diff"):
+        card_header(f"Difference by month — {pick}", f"MIS vs GPS — dotted lines mark the ±{threshold}% limit",
+                    legend=[(STATUS_LABEL[s], STATUS_FILL[s]) for s in ("critical", "watch", "ok")])
+        st.plotly_chart(monthly_diff_fig(entries, threshold, 300), use_container_width=True,
+                        key="chart_site_mw_diff", config=PLOTLY_CONFIG)
 
     render_monthwise_comparison(site_summary, threshold, by="Site")
 
