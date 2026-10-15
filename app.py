@@ -1649,6 +1649,95 @@ def page_vehicles():
 
     st.dataframe(styled, use_container_width=True, hide_index=True, height=460, column_config={"Severity": None})
 
+    render_monthwise_comparison(view, st.session_state.threshold)
+
+
+def build_monthwise_table(vehicles, metric):
+    """One row per vehicle, one column per saved month (oldest -> newest) for the chosen metric.
+    metric: 'Diff %' | 'GPS km' | 'MIS km'. Returns (table, month_columns)."""
+    entries = sorted(load_history().values(), key=lambda e: e["key"])
+    rows = []
+    for e in entries:
+        month = short_month(e["label"])
+        for r in e.get("vehicle_totals", []):
+            gps, mis = float(r.get("Total GPS") or 0), float(r.get("Total MIS") or 0)
+            rows.append({"Vehicle": r["Vehicle"], "Month": month, "GPS km": gps, "MIS km": mis,
+                         "Diff %": ((mis - gps) / gps * 100) if gps else (0.0 if mis == 0 else float("nan"))})
+    months = [short_month(e["label"]) for e in entries]
+    if not rows:
+        return pd.DataFrame(), months
+    long = pd.DataFrame(rows)
+    wide = long.pivot_table(index="Vehicle", columns="Month", values=metric, aggfunc="first")
+    wide = wide.reindex(columns=months).reindex([v for v in vehicles if v in wide.index])
+    # Trend line skips months with no value (e.g. MIS km but zero GPS km).
+    wide["Trend"] = wide[months].apply(lambda r: [round(float(x), 1) for x in r if not pd.isna(x)], axis=1)
+    if len(months) >= 2:
+        last, prev = months[-1], months[-2]
+        wide["Change"] = wide[last] - wide[prev]
+    wide = wide.reset_index()
+    wide.columns.name = None   # a named header row shifts Streamlit's Styler formatting
+    return wide, months
+
+
+def render_monthwise_comparison(view, threshold):
+    section_title("Month-wise comparison",
+                  "Each vehicle across every saved month — follows the Site / Search / Action filters above")
+    n_months = len(load_history())
+    if n_months < 2:
+        st.info("Save at least two months to compare vehicles month by month.")
+        return
+    metric = st.radio("Show", ["Diff %", "GPS km", "MIS km"], horizontal=True, key="mw_metric",
+                      label_visibility="collapsed")
+    site_of = dict(zip(view["Vehicle"], view["Site"]))
+    table, months = build_monthwise_table(view["Vehicle"].tolist(), metric)
+    if table.empty:
+        st.caption("No saved months contain these vehicles.")
+        return
+    table.insert(1, "Site", table["Vehicle"].map(site_of))
+
+    def diff_color(v):
+        if pd.isna(v):
+            return f"color: {COLOR_MUTED};"
+        a = abs(v)
+        c = COLOR_CRIT if a > threshold else (COLOR_WARN if a > threshold / 2 else COLOR_OK)
+        return f"color: {c}; font-weight: 600;"
+
+    def change_color(v):
+        if pd.isna(v) or v == 0:
+            return f"color: {COLOR_MUTED};"
+        if metric == "Diff %":   # moving towards 0 is an improvement
+            return ""
+        return f"color: {COLOR_TEXT};"
+
+    num_fmt = "{:+.1f}%" if metric == "Diff %" else "{:,.0f}"
+    chg_fmt = "{:+.1f} pts" if metric == "Diff %" else "{:+,.0f}"
+    # Streamlit draws empty cells as "None", so cells are written out as text ("—" when
+    # missing) and coloured from the numbers kept in `table`.
+    text_cols = months + (["Change"] if "Change" in table.columns else [])
+    display = table.copy()
+    for c in text_cols:
+        fmt = chg_fmt if c == "Change" else num_fmt
+        display[c] = table[c].map(lambda v, f=fmt: "—" if pd.isna(v) else f.format(v))
+    styler = display.style.apply(
+        lambda col: [change_color(v) if col.name == "Change"
+                     else (diff_color(v) if metric == "Diff %" else ("" if not pd.isna(v) else f"color: {COLOR_MUTED};"))
+                     for v in table[col.name]],
+        subset=text_cols,
+    )
+    styler = styler.set_properties(subset=text_cols, **{"text-align": "right"})
+
+    config = {
+        "Trend": st.column_config.LineChartColumn(
+            "Trend", width="small",
+            help=f"{metric} for each saved month, oldest to newest"),
+    }
+    if "Change" in table.columns:
+        config["Change"] = st.column_config.Column(
+            f"Change vs {months[-2]}", help=f"{months[-1]} minus {months[-2]}")
+    st.caption(f"{len(table)} vehicles · {len(months)} months · "
+               + ("colours use the ±%d%% flag limit" % threshold if metric == "Diff %" else "values in km"))
+    st.dataframe(styler, use_container_width=True, hide_index=True, height=420, column_config=config)
+
 
 def page_drilldown():
     card = lambda *a, **k: kpi_card(*a, compact=True, **k)
