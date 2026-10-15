@@ -132,21 +132,21 @@ p, label, span, div {{ font-size: 15px; font-weight: 400; }}
     content: ""; position: absolute; right: -60px; top: -80px; width: 280px; height: 280px;
     border-radius: 50%; background: radial-gradient(circle, rgba(255,255,255,0.14), rgba(255,255,255,0) 70%);
 }}
-.brand-hero .hero-eyebrow {{ color: rgba(255,255,255,0.72) !important; font-size: 12px !important; font-weight: 700 !important; letter-spacing: 1.6px; text-transform: uppercase; }}
-.brand-hero .hero-title {{ color: #FFFFFF !important; font-size: 28px !important; font-weight: 750 !important; letter-spacing: -0.5px; line-height: 1.2; margin-top: 4px; }}
-.brand-hero .hero-sub {{ color: rgba(255,255,255,0.78) !important; font-size: 14px !important; margin-top: 6px; }}
-.brand-hero .hero-chips {{ display: flex; gap: 8px; flex-wrap: wrap; position: relative; z-index: 1; }}
-.brand-hero .hero-chip {{
+:is(.brand-hero, .st-key-hero) .hero-eyebrow {{ color: rgba(255,255,255,0.72) !important; font-size: 12px !important; font-weight: 700 !important; letter-spacing: 1.6px; text-transform: uppercase; }}
+:is(.brand-hero, .st-key-hero) .hero-title {{ color: #FFFFFF !important; font-size: 28px !important; font-weight: 750 !important; letter-spacing: -0.5px; line-height: 1.2; margin-top: 4px; }}
+:is(.brand-hero, .st-key-hero) .hero-sub {{ color: rgba(255,255,255,0.78) !important; font-size: 14px !important; margin-top: 6px; }}
+:is(.brand-hero, .st-key-hero) .hero-chips {{ display: flex; gap: 8px; flex-wrap: wrap; position: relative; z-index: 1; }}
+:is(.brand-hero, .st-key-hero) .hero-chip {{
     display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: 999px;
     background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.22);
     color: #FFFFFF !important; font-size: 13px !important; font-weight: 600 !important; white-space: nowrap;
 }}
-.brand-hero .hero-chip svg {{ width: 15px; height: 15px; }}
-.brand-hero .hero-logo {{
+:is(.brand-hero, .st-key-hero) .hero-chip svg {{ width: 15px; height: 15px; }}
+:is(.brand-hero, .st-key-hero) .hero-logo {{
     position: relative; z-index: 1; background: #FFFFFF; border-radius: 14px; padding: 10px 18px;
     box-shadow: 0 6px 18px rgba(0,0,0,0.18); display: flex; align-items: center;
 }}
-.brand-hero .hero-logo img {{ height: 84px; width: auto; display: block; }}
+:is(.brand-hero, .st-key-hero) .hero-logo img {{ height: 84px; width: auto; display: block; }}
 
 /* ---------- KPI cards ---------- */
 .kpi-card {{
@@ -162,11 +162,29 @@ p, label, span, div {{ font-size: 15px; font-weight: 400; }}
                   letter-spacing: -0.2px; margin: 18px 0 2px; }}
 .section-sub {{ color: {COLOR_MUTED} !important; font-size: 13px !important; margin-bottom: 10px; }}
 .st-key-flagged_only {{ padding-top: 2.05rem; }}
-.st-key-month_bar {{ margin-bottom: -6px; }}
-.st-key-month_bar [data-testid="stWidgetLabel"] p {{ color: {COLOR_MUTED} !important; font-size: 12px !important;
-    font-weight: 700 !important; letter-spacing: 0.8px; text-transform: uppercase; }}
-.st-key-month_bar [data-baseweb="select"] > div {{ border-radius: 10px !important; font-weight: 600 !important;
-    box-shadow: 0 1px 2px {SHADOW_SM}; }}
+/* Header band as a container, so the month filter can live inside it */
+.st-key-hero {{
+    background: radial-gradient(circle at 94% -20%, rgba(255,255,255,0.16), rgba(255,255,255,0) 34%), {BRAND_GRADIENT};
+    border-radius: 18px; padding: 26px 30px 24px !important; margin-bottom: 8px; gap: 0.35rem;
+    box-shadow: 0 10px 30px rgba(11,31,75,0.25);
+}}
+.st-key-hero [data-testid="stHorizontalBlock"] {{ margin-top: 14px; gap: 10px; }}
+.st-key-hero [data-testid="stColumn"] {{ width: auto !important; flex: 0 0 auto !important; min-width: 0 !important; }}
+.st-key-hero .stSelectbox {{ width: 236px; }}
+.st-key-flag_limit .stSelectbox, .st-key-hero .st-key-flag_limit {{ width: 200px; }}
+.st-key-hero .st-key-flag_limit .stSelectbox [role="group"] {{ background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M4 7h16M4 17h16'/%3E%3Ccircle cx='9' cy='7' r='2.5' fill='%2313317A'/%3E%3Ccircle cx='15' cy='17' r='2.5' fill='%2313317A'/%3E%3C/svg%3E") !important; }}
+.st-key-hero .stSelectbox [role="group"] {{
+    background: rgba(255,255,255,0.14) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect width='18' height='18' x='3' y='4' rx='2'/%3E%3Cpath d='M16 2v4M8 2v4M3 10h18'/%3E%3C/svg%3E") no-repeat 13px center / 16px 16px !important;
+    border: 1px solid rgba(255,255,255,0.34) !important; border-radius: 999px !important;
+    min-height: 38px !important; padding-left: 32px !important; cursor: pointer;
+}}
+.st-key-hero .stSelectbox [role="group"]:hover {{ background-color: rgba(255,255,255,0.22) !important; }}
+.st-key-hero .stSelectbox input {{
+    color: #FFFFFF !important; -webkit-text-fill-color: #FFFFFF; background: transparent !important;
+    font-weight: 600 !important; font-size: 14px !important; cursor: pointer;
+}}
+.st-key-hero .stSelectbox button, .st-key-hero .stSelectbox svg {{ color: #FFFFFF !important; fill: #FFFFFF !important; }}
+.st-key-hero .hero-chip {{ height: 38px; box-sizing: border-box; font-size: 14px !important; }}
 .kpi-card::before {{
     content: ""; position: absolute; left: 0; right: 0; top: 0; height: 3px; background: var(--accent);
 }}
@@ -604,30 +622,38 @@ def save_branding(data):
 # ---------------------------------------------------------------------------
 # Brand header band (shown at the top of every page, and on the login screen)
 # ---------------------------------------------------------------------------
-def render_brand_header(title="GPS vs MIS Dashboard", subtitle=None, show_logo=False):
-    def chip(icon, text):
-        return f"<span class='hero-chip'>{icon_svg(icon)}{text}</span>"
+FLAG_LIMITS = list(range(5, 101, 5))
 
-    chips = ""
-    if st.session_state.get("authenticated"):
-        if st.session_state.get("month_label"):
-            chips += chip("calendar", st.session_state.month_label)
-        if st.session_state.get("threshold") is not None:
-            chips += chip("sliders", f"Flag limit ±{st.session_state.threshold}%")
+
+def render_brand_header(title="GPS vs MIS Dashboard", subtitle=None):
+    """Navy header band. When logged in it carries the month filter and the flag-limit chip."""
     sub_html = f"<div class='hero-sub'>{subtitle}</div>" if subtitle else ""
-    right_html = f"<div class='hero-chips'>{chips}</div>"
-    if show_logo and LOGO_PATH.exists():
-        logo_b64 = base64.b64encode(LOGO_PATH.read_bytes()).decode()
-        right_html = f"<div class='hero-logo'><img src='data:image/png;base64,{logo_b64}' alt='{COMPANY_NAME} logo'></div>"
-    st.markdown(
-        f"<div class='brand-hero'>"
-        f"<div style='position:relative; z-index:1;'>"
-        f"<div class='hero-eyebrow'>{COMPANY_NAME} · Fleet telemetry reconciliation</div>"
-        f"<div class='hero-title'>{title}</div>{sub_html}</div>"
-        f"{right_html}"
-        f"</div>",
-        unsafe_allow_html=True,
-    )
+    options = st.session_state.get("_month_options") if st.session_state.get("authenticated") else None
+    upload_label = st.session_state.get("_upload_label", "")
+    with st.container(key="hero"):
+        st.markdown(
+            f"<div class='hero-eyebrow'>{COMPANY_NAME} · Fleet telemetry reconciliation</div>"
+            f"<div class='hero-title'>{title}</div>{sub_html}",
+            unsafe_allow_html=True,
+        )
+        if options:
+            # Each page draws its own copy of these dropdowns, so the chosen values live in
+            # _month_sel / _flag_sel (shared by all pages) and are copied in and out here.
+            st.session_state.month_filter = st.session_state.get("_month_sel", options[0])
+            st.session_state.flag_limit = st.session_state.get("_flag_sel", 20)
+            month_col, chip_col = st.columns(2, vertical_alignment="center")
+            month_col.selectbox(
+                "Month", options, key="month_filter", label_visibility="collapsed",
+                on_change=lambda: st.session_state.update(_month_sel=st.session_state.month_filter),
+                format_func=lambda o: f"{upload_label} · new upload" if o == "📤 Uploaded file" else o,
+                help="Pick the month every page shows",
+            )
+            chip_col.selectbox(
+                "Flag limit", FLAG_LIMITS, key="flag_limit", label_visibility="collapsed",
+                on_change=lambda: st.session_state.update(_flag_sel=st.session_state.flag_limit),
+                format_func=lambda v: f"Flag limit ±{v}%",
+                help="A vehicle or site is flagged when its MIS vs GPS difference is larger than this",
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -909,20 +935,23 @@ sorted_hist_entries = sorted(hist.values(), key=lambda x: x["key"], reverse=True
 month_options = [e["label"] for e in sorted_hist_entries]
 
 if uploaded is None and not month_options:
+    st.session_state._month_options = []
     render_brand_header()
     st.info("Upload your monthly GPS + MIS workbook using the sidebar to see the analysis.")
     st.stop()
 
-# Month filter — a bar at the top of every page (newest month first).
+# Month filter — the dropdown itself is drawn inside each page's header band
+# (render_brand_header); here we read its current value to load that month.
 view_options = (["📤 Uploaded file"] if uploaded is not None else []) + month_options
-_upload_label = guess_month_from_filename(uploaded.name)[1] if uploaded is not None else ""
-with st.container(key="month_bar"):
-    _, month_col = st.columns([2.6, 1])
-    view_choice = month_col.selectbox(
-        "📅  Month", view_options, index=0, key="month_filter",
-        format_func=lambda o: f"{_upload_label} · new upload" if o == "📤 Uploaded file" else o,
-        help="Pick which saved month every page shows. Upload a new month's workbook in the sidebar.",
-    )
+st.session_state._month_options = view_options
+st.session_state._upload_label = guess_month_from_filename(uploaded.name)[1] if uploaded is not None else ""
+_upload_id = uploaded.file_id if uploaded is not None else None
+if _upload_id and st.session_state.get("_last_upload_id") != _upload_id:
+    st.session_state._month_sel = "📤 Uploaded file"   # jump to a freshly uploaded file
+st.session_state._last_upload_id = _upload_id
+if st.session_state.get("_month_sel") not in view_options:
+    st.session_state._month_sel = view_options[0]
+view_choice = st.session_state._month_sel
 
 with st.sidebar:
 
@@ -964,10 +993,10 @@ with st.sidebar:
             daily_df = pd.DataFrame(columns=["Vehicle", "Day", "GPS", "MIS"])
             st.caption(f"Saved month · **{view_choice}** · totals only")
 
-    threshold = st.slider(
-        "Flag limit (±%)", 5, 100, 20, step=5,
-        help="A vehicle or site is flagged when its MIS vs GPS difference is larger than this percentage.",
-    )
+    # Flag limit is chosen in the header band (render_brand_header).
+    if st.session_state.get("_flag_sel") not in FLAG_LIMITS:
+        st.session_state._flag_sel = 20
+    threshold = st.session_state._flag_sel
 
 action_info = df.apply(lambda r: classify(r, threshold), axis=1)
 df["Action"] = action_info.apply(lambda x: x[0])
