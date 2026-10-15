@@ -162,6 +162,11 @@ p, label, span, div {{ font-size: 15px; font-weight: 400; }}
                   letter-spacing: -0.2px; margin: 18px 0 2px; }}
 .section-sub {{ color: {COLOR_MUTED} !important; font-size: 13px !important; margin-bottom: 10px; }}
 .st-key-flagged_only {{ padding-top: 2.05rem; }}
+.st-key-month_bar {{ margin-bottom: -6px; }}
+.st-key-month_bar [data-testid="stWidgetLabel"] p {{ color: {COLOR_MUTED} !important; font-size: 12px !important;
+    font-weight: 700 !important; letter-spacing: 0.8px; text-transform: uppercase; }}
+.st-key-month_bar [data-baseweb="select"] > div {{ border-radius: 10px !important; font-weight: 600 !important;
+    box-shadow: 0 1px 2px {SHADOW_SM}; }}
 .kpi-card::before {{
     content: ""; position: absolute; left: 0; right: 0; top: 0; height: 3px; background: var(--accent);
 }}
@@ -908,9 +913,18 @@ if uploaded is None and not month_options:
     st.info("Upload your monthly GPS + MIS workbook using the sidebar to see the analysis.")
     st.stop()
 
+# Month filter — a bar at the top of every page (newest month first).
+view_options = (["📤 Uploaded file"] if uploaded is not None else []) + month_options
+_upload_label = guess_month_from_filename(uploaded.name)[1] if uploaded is not None else ""
+with st.container(key="month_bar"):
+    _, month_col = st.columns([2.6, 1])
+    view_choice = month_col.selectbox(
+        "📅  Month", view_options, index=0, key="month_filter",
+        format_func=lambda o: f"{_upload_label} · new upload" if o == "📤 Uploaded file" else o,
+        help="Pick which saved month every page shows. Upload a new month's workbook in the sidebar.",
+    )
+
 with st.sidebar:
-    view_options = (["📤 Uploaded file"] if uploaded is not None else []) + month_options
-    view_choice = st.selectbox("Viewing", view_options, index=0)
 
     has_daily = False
 
