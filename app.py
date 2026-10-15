@@ -158,6 +158,11 @@ p, label, span, div {{ font-size: 15px; font-weight: 400; }}
     display: flex; flex-direction: column; min-height: 220px; box-sizing: border-box;
 }}
 .kpi-card.compact {{ min-height: 174px; }}
+[data-testid="stTabs"] [role="tablist"] {{ gap: 6px; border-bottom: 1px solid {COLOR_BORDER}; }}
+[data-testid="stTabs"] [role="tab"] {{ padding: 8px 14px !important; border-radius: 10px 10px 0 0; }}
+[data-testid="stTabs"] [role="tab"] p {{ font-size: 14.5px !important; font-weight: 600 !important; color: {COLOR_MUTED} !important; }}
+[data-testid="stTabs"] [role="tab"][aria-selected="true"] p {{ color: {COLOR_VEHICLES} !important; }}
+[data-testid="stTabs"] [role="tab"]:hover {{ background: color-mix(in srgb, {COLOR_VEHICLES} 6%, transparent); }}
 .section-title {{ color: {COLOR_TEXT} !important; font-size: 18px !important; font-weight: 650 !important;
                   letter-spacing: -0.2px; margin: 18px 0 2px; }}
 .section-sub {{ color: {COLOR_MUTED} !important; font-size: 13px !important; margin-bottom: 10px; }}
@@ -1515,7 +1520,10 @@ def page_sites():
              vs_text=str(worst["Site"]) if worst is not None else None)
 
     st.write("")
-    with st.container(border=True, key="card_5"):
+    tab_diff, tab_vol, tab_table, tab_months = st.tabs(
+        ["📊  Difference by site", "🛣️  Km volume", "📋  Site table", "📅  Month-wise comparison"])
+
+    with tab_diff, st.container(border=True, key="card_5"):
         card_header("Difference by site", f"MIS vs GPS km difference, largest at the top — dotted lines mark the "
                     f"±{threshold}% flag limit · scroll inside the box to see all sites",
                     legend=[(STATUS_LABEL[s], STATUS_FILL[s]) for s in ("critical", "watch", "ok")])
@@ -1536,7 +1544,7 @@ def page_sites():
     fig_vol.update_yaxes(showgrid=False, automargin=True, tickfont=dict(size=12.5, color=COLOR_TEXT))
     fig_vol.update_layout(barmode="group", bargap=0.3, bargroupgap=0.1)
 
-    with st.container(border=True, key="card_6"):
+    with tab_vol, st.container(border=True, key="card_6"):
         card_header("Kilometre volume by site", "Total GPS vs MIS km, largest sites at the top — scroll inside the box to see all sites",
                     legend=[("GPS", COLOR_GPS), ("MIS", COLOR_MIS)])
         with st.container(height=440, border=False):
@@ -1552,15 +1560,18 @@ def page_sites():
         .format({"GPS km": "{:,.0f}", "MIS km": "{:,.0f}", "Diff %": "{:+.1%}"})
         .hide(axis="columns", subset=["Severity"])
     )
-    section_title("Site table", "Every site, largest difference first")
-    st.dataframe(site_styled, use_container_width=True, hide_index=True, column_config={"Severity": None})
+    with tab_table:
+        st.caption("Every site for the selected month, largest difference first")
+        st.dataframe(site_styled, use_container_width=True, hide_index=True, height=440,
+                     column_config={"Severity": None})
 
-    render_site_monthwise(site_summary, threshold)
+    with tab_months:
+        render_site_monthwise(site_summary, threshold)
 
 
 def render_site_monthwise(site_summary, threshold):
     """Month-wise GPS vs MIS for sites: a per-site chart, then the site x month table."""
-    section_title("Month-wise comparison", "GPS vs MIS km for each site across every saved month")
+    st.caption("GPS vs MIS km for each site across every saved month")
     long, months = monthwise_long("Site")
     if len(months) < 2 or long.empty:
         st.info("Save at least two months to compare sites month by month.")
@@ -1576,12 +1587,12 @@ def render_site_monthwise(site_summary, threshold):
     with st.container(border=True, key="card_site_mw_km"):
         card_header(f"GPS vs MIS km by month — {pick}", "Total km recorded by GPS and logged in MIS",
                     legend=[("GPS", COLOR_GPS), ("MIS", COLOR_MIS)])
-        st.plotly_chart(monthly_totals_fig(entries, 320), use_container_width=True,
+        st.plotly_chart(monthly_totals_fig(entries, 270), use_container_width=True,
                         key="chart_site_mw_km", config=PLOTLY_CONFIG)
     with st.container(border=True, key="card_site_mw_diff"):
         card_header(f"Difference by month — {pick}", f"MIS vs GPS — dotted lines mark the ±{threshold}% limit",
                     legend=[(STATUS_LABEL[s], STATUS_FILL[s]) for s in ("critical", "watch", "ok")])
-        st.plotly_chart(monthly_diff_fig(entries, threshold, 300), use_container_width=True,
+        st.plotly_chart(monthly_diff_fig(entries, threshold, 250), use_container_width=True,
                         key="chart_site_mw_diff", config=PLOTLY_CONFIG)
 
     render_monthwise_comparison(site_summary, threshold, by="Site")
